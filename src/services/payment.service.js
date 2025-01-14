@@ -28,55 +28,7 @@ const PaymentService = {
     return { payment, paymentUrl };
   },
 
-  async handlePaymentCallback(queryParams) {
-    const { vnp_TransactionStatus, vnp_OrderInfo } = queryParams;
 
-    // Kiểm tra trạng thái thanh toán từ cổng VNPay
-    if (vnp_TransactionStatus === "00") {
-      // Cập nhật trạng thái Payment
-      const payment = await Payment.findOneAndUpdate(
-        { _id: vnp_OrderInfo },
-        { status: "success" },
-        { new: true }
-      );
-
-      // Cập nhật trạng thái Cart
-      await Cart.findByIdAndUpdate(payment.cartId, { status: "success" });
-
-      return "success";
-    } else {
-      throw new Error("Payment failed or canceled");
-    }
-  },
-  async handleIpn(ipnData) {
-    const { vnp_SecureHash, ...params } = ipnData;
-
-    // Validate the IPN signature
-    if (!validateIpnSignature(params, vnp_SecureHash)) {
-      throw new Error("Invalid signature");
-    }
-
-    const { vnp_TransactionStatus, vnp_OrderInfo } = params;
-
-    if (vnp_TransactionStatus === "00") {
-      const payment = await Payment.findOneAndUpdate(
-        { _id: vnp_OrderInfo },
-        { status: "success" },
-        { new: true }
-      );
-
-      await Cart.findByIdAndUpdate(payment.cartId, { status: "success" });
-
-      return { status: "success", payment };
-    } else {
-      await Payment.findOneAndUpdate(
-        { _id: vnp_OrderInfo },
-        { status: "failed" }
-      );
-
-      return { status: "failed" };
-    }
-  },
 };
 
 module.exports = PaymentService;
