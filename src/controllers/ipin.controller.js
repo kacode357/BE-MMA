@@ -26,46 +26,47 @@ const IPNController = {
       const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
       // Kiểm tra chữ ký
-      if (secureHash === signed) {
-        const { vnp_TxnRef: orderId, vnp_OrderInfo: paymentId, vnp_ResponseCode, vnp_Amount } = vnp_Params;
+      if (secureHash !== signed) {
+        return res.status(200).json({ RspCode: "97", Message: "Fail checksum" });
+      }
 
-        // Tìm payment trong database bằng vnp_OrderInfo (paymentId)
-        const payment = await Payment.findById(paymentId);
-        if (!payment) {
-          return res.status(404).json({ RspCode: "01", Message: "Payment not found" });
-        }
+      const { vnp_TxnRef: orderId, vnp_OrderInfo: paymentId, vnp_ResponseCode, vnp_Amount } = vnp_Params;
 
-        // Kiểm tra vnp_TxnRef khớp với orderId đã lưu trong Payment
-        if (payment.txnRef !== orderId) {
-          return res.status(400).json({ RspCode: "04", Message: "Invalid orderId" });
-        }
+      // Tìm payment trong database bằng vnp_OrderInfo (paymentId)
+      const payment = await Payment.findById(paymentId);
+      if (!payment) {
+        return res.status(200).json({ RspCode: "01", Message: "Payment not found" });
+      }
 
-        // Cập nhật trạng thái thanh toán
-        if (vnp_ResponseCode === "00") {
-          payment.status = "success";
+      // Kiểm tra vnp_TxnRef khớp với orderId đã lưu trong Payment
+      if (payment.txnRef !== orderId) {
+        return res.status(200).json({ RspCode: "04", Message: "Invalid orderId" });
+      }
 
-          // Cập nhật trạng thái của cart (nếu cần)
-          const cart = await Cart.findById(payment.cartId);
-          if (cart) {
-            cart.status = "success";
-            await cart.save();
-          }
-        } else {
-          payment.status = "failed";
+      // Cập nhật trạng thái thanh toán
+      if (vnp_ResponseCode === "00") {
+        payment.status = "success";
+
+        // Cập nhật trạng thái của cart (nếu cần)
+        const cart = await Cart.findById(payment.cartId);
+        if (cart) {
+          cart.status = "success";
+          await cart.save();
         }
 
         payment.amountPaid = parseInt(vnp_Amount) / 100; // VNPay trả về amount nhân với 100
         await payment.save();
 
-        // Trả kết quả thành công về VNPay
         return res.status(200).json({ RspCode: "00", Message: "Success" });
       } else {
-        // Nếu chữ ký không khớp, trả về lỗi
-        return res.status(200).json({ RspCode: "97", Message: "Fail checksum" });
+        payment.status = "failed";
+        await payment.save();
+
+        return res.status(200).json({ RspCode: "02", Message: "Transaction failed" });
       }
     } catch (error) {
       console.error("Error handling IPN:", error.message);
-      res.status(500).json({ RspCode: "99", Message: "Internal server error" });
+      return res.status(500).json({ RspCode: "99", Message: "Internal server error" });
     }
   },
 };
