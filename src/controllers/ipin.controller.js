@@ -34,19 +34,19 @@ const IPNController = {
         
 
         // Kiểm tra vnp_TxnRef khớp với orderId đã lưu trong Payment
-        if (payment.txnRef !== orderId) {
-          return res.status(404).json({ RspCode: "04", Message: "Invalid orderId" });
-        }
+        // if (payment.txnRef !== orderId) {
+        //   return res.status(404).json({ RspCode: "04", Message: "Invalid orderId" });
+        // }
 
         // Cập nhật trạng thái thanh toán
         if (vnp_ResponseCode === "00") {
           payment.status = "success";
 
           // Cập nhật trạng thái của cart (nếu cần)
-          const cart = await Cart.findById(payment.cartId);
-          if (cart) {
-            cart.status = "success";
-            await cart.save();
+          const Payment = await Payment.findById(paymentId);
+          if (Payment) {
+            Payment.status = "success";
+            await Payment.save();
           }
         } else {
           payment.status = "failed";
