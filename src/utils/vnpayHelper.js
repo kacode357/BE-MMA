@@ -15,6 +15,9 @@ const createPaymentUrl = async (body, headers) => {
     const returnUrl = config.get("vnp_ReturnUrl");
 
     const orderId = moment(date).format("DDHHmmss");
+    const PaymentId = body.paymentId;
+    const PaymentIdString = PaymentId.toString();
+    console.log("PaymentId", PaymentIdString);
     const amount = body.amount * 100; // Đổi sang đơn vị nhỏ nhất
     const locale = body.language || "vn";
     const currCode = "VND";
@@ -26,7 +29,7 @@ const createPaymentUrl = async (body, headers) => {
       vnp_Locale: locale,
       vnp_CurrCode: currCode,
       vnp_TxnRef: orderId,
-      vnp_OrderInfo: `Thanh+toan+don+hang%3A${orderId}`,
+      vnp_OrderInfo: `${PaymentId}`,
       vnp_OrderType: "other",
       vnp_Amount: amount,
       vnp_ReturnUrl: returnUrl,

@@ -12,7 +12,6 @@ const PaymentController = {
         payment,
         paymentUrl,
       });
-
     } catch (error) {
       console.error("Error creating payment:", error.message);
       res.status(400).json({ error: error.message });
@@ -29,6 +28,20 @@ const PaymentController = {
       });
     } catch (error) {
       console.error("Error in payment callback:", error.message);
+      res.status(400).json({ error: error.message });
+    }
+  },
+
+  async paymentIpn(req, res) {
+    try {
+      const result = await PaymentService.handleIpn(req.body);
+
+      res.status(200).json({
+        message: "IPN processed successfully",
+        result,
+      });
+    } catch (error) {
+      console.error("Error in IPN handling:", error.message);
       res.status(400).json({ error: error.message });
     }
   },

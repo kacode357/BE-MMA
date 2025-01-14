@@ -13,7 +13,7 @@ const initRoute = (app) => {
   app.use("/v1/api", GroupRoute);
   app.use("/v1/api", FoodRoute);
   app.use("/v1/api", CartRoute);
-  app.use("/v1/api", Payment);
+  app.use("/api", Payment);
   app.use("/v1/api", VnPay);
 };
 
