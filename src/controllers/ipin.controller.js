@@ -42,7 +42,7 @@ const IPNController = {
         if (vnp_ResponseCode === "00") {
             const payment = await Payment.findById(paymentId);
             if (payment) {
-              payment.status = "success";
+              payment.status = "successful";
               await payment.save();
             }
           } else {
