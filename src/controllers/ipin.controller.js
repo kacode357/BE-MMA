@@ -40,17 +40,14 @@ const IPNController = {
 
         // Cập nhật trạng thái thanh toán
         if (vnp_ResponseCode === "00") {
-          payment.status = "success";
-
-          // Cập nhật trạng thái của cart (nếu cần)
-          const Payment = await Payment.findById(paymentId);
-          if (Payment) {
-            Payment.status = "success";
-            await Payment.save();
+            const payment = await Payment.findById(paymentId);
+            if (payment) {
+              payment.status = "success";
+              await payment.save();
+            }
+          } else {
+            payment.status = "failed";
           }
-        } else {
-          payment.status = "failed";
-        }
 
         payment.amountPaid = parseInt(vnp_Amount) / 100; // VNPay trả về amount nhân với 100
         await payment.save();
