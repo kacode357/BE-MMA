@@ -1,6 +1,6 @@
 const Payment = require("../models/payment.model");
 const Cart = require("../models/cart.model");
-const config = require("config");
+const config = require("../config/default.json");
 const querystring = require("qs");
 const crypto = require("crypto");
 
@@ -18,7 +18,7 @@ const IPNController = {
       vnp_Params = sortObject(vnp_Params);
       
       // Lấy secretKey từ cấu hình
-      const secretKey = config.get("vnp_HashSecret");
+      const secretKey = config.vnp_HashSecret;
       
       // Tạo chuỗi ký
       const signData = querystring.stringify(vnp_Params, { encode: false });
