@@ -9,30 +9,35 @@ const IPNController = {
     try {
       let vnp_Params = req.query;
       const secureHash = vnp_Params["vnp_SecureHash"];
-      
+
       // Xóa các trường không cần thiết trước khi ký
       delete vnp_Params["vnp_SecureHash"];
       delete vnp_Params["vnp_SecureHashType"];
-      
+
       // Sắp xếp các tham số theo thứ tự chữ cái
       vnp_Params = sortObject(vnp_Params);
-      
+
       // Lấy secretKey từ cấu hình
       const secretKey = config.vnp_HashSecret;
-      
+
       // Tạo chuỗi ký
       const signData = querystring.stringify(vnp_Params, { encode: false });
       const hmac = crypto.createHmac("sha512", secretKey);
       const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
-      // So sánh chữ ký
+      // Kiểm tra chữ ký
       if (secureHash === signed) {
-        const { vnp_TxnRef: paymentId, vnp_ResponseCode, vnp_Amount } = vnp_Params;
+        const { vnp_TxnRef: orderId, vnp_OrderInfo: paymentId, vnp_ResponseCode, vnp_Amount } = vnp_Params;
 
-        // Tìm payment trong database
+        // Tìm payment trong database bằng vnp_OrderInfo (paymentId)
         const payment = await Payment.findById(paymentId);
         if (!payment) {
           return res.status(404).json({ RspCode: "01", Message: "Payment not found" });
+        }
+
+        // Kiểm tra vnp_TxnRef khớp với orderId đã lưu trong Payment
+        if (payment.txnRef !== orderId) {
+          return res.status(400).json({ RspCode: "04", Message: "Invalid orderId" });
         }
 
         // Cập nhật trạng thái thanh toán
@@ -49,13 +54,13 @@ const IPNController = {
           payment.status = "failed";
         }
 
-        payment.amountPaid = parseInt(vnp_Amount) / 100; 
+        payment.amountPaid = parseInt(vnp_Amount) / 100; // VNPay trả về amount nhân với 100
         await payment.save();
 
-        // Trả kết quả thành công
-        return res.status(200).json({ RspCode: "00", Message: "success" });
+        // Trả kết quả thành công về VNPay
+        return res.status(200).json({ RspCode: "00", Message: "Success" });
       } else {
-        // Trả kết quả lỗi checksum
+        // Nếu chữ ký không khớp, trả về lỗi
         return res.status(200).json({ RspCode: "97", Message: "Fail checksum" });
       }
     } catch (error) {
