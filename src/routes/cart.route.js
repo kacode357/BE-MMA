@@ -9,5 +9,5 @@ router.delete("/cart", CartController.removeFromCartController);
 router.delete("/cart/clear", CartController.clearCartController);
 router.get("/cart", CartController.getCartController);
 router.delete("/cart/delete", CartController.deleteCartController);
-
+router.get("/cart/:id", CartController.getCartByIdController);
 module.exports = router;

@@ -127,7 +127,7 @@ const clearCart = async () => {
   const getCart = async () => {
     // Tìm giỏ hàng active (chỉ có một giỏ hàng active cho POS)
     const cart = await Cart.findOne({ status: "active" }).populate("items.foodId");
-    return cart || null; // Trả về null nếu không tìm thấy giỏ hàng
+    return cart || null; 
   };
   const deleteCart = async () => {
     // Tìm giỏ hàng active
@@ -142,7 +142,14 @@ const clearCart = async () => {
   
     return;
   };
+  const getCartById = async (id) => {
+    // Tìm giỏ hàng theo ID và populate items.foodId
+    const cart = await Cart.findById(id).populate("items.foodId");
+  
+    return cart || null;
+  };
 module.exports = {
+    getCartById,
     deleteCart,
     getCart,
     clearCart,
