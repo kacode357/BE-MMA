@@ -30,7 +30,7 @@ const PaymentService = {
   
     // Return the created payment and the generated URL
     return { payment, paymentUrl };
-  }
+  },
   async createCashPayment(cartId, amountPaid) {
     const cart = await Cart.findById(cartId);
     if (!cart) {
