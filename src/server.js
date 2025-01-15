@@ -3,7 +3,7 @@ const express = require("express"); //commonjs
 const configViewEngine = require("./config/viewEngine");
 const apiRoutes = require("./routes/api");
 const connection = require("./config/database");
-const { getHomepage, getLoginpage } = require("./controllers/homeController");
+
 var cors = require("cors");
 
 const app = express();
@@ -19,8 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 configViewEngine(app);
 
 const webAPI = express.Router();
-webAPI.get("/", getHomepage);
-webAPI.get("/login", getLoginpage);
+
 
 //khai báo route
 apiRoutes(app);
