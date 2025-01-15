@@ -4,13 +4,15 @@ const PaymentController = {
   async createPayment(req, res) {
     try {
       const { cartId, amountPaid } = req.body;
-
+  
       const { payment, paymentUrl } = await PaymentService.createPayment(cartId, amountPaid, req.headers);
-
+  
       res.status(200).json({
         message: "Payment created successfully",
-        payment,
-        paymentUrl,
+        data: {
+          payment,
+          paymentUrl,
+        },
       });
     } catch (error) {
       console.error("Error creating payment:", error.message);
