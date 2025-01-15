@@ -17,7 +17,21 @@ const PaymentController = {
       res.status(400).json({ error: error.message });
     }
   },
+  async createCashPayment(req, res) {
+    try {
+      const { cartId, amountPaid } = req.body;
 
+      const payment = await PaymentService.createCashPayment(cartId, amountPaid);
+
+      res.status(200).json({
+        message: "Cash payment recorded successfully",
+        payment,
+      });
+    } catch (error) {
+      console.error("Error recording cash payment:", error.message);
+      res.status(400).json({ error: error.message });
+    }
+  },
 
 };
 
