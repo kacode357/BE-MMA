@@ -55,6 +55,11 @@ const removeFromCartController = async (req, res) => {
       // Gọi service để lấy thông tin giỏ hàng
       const cart = await CartService.getCart();
   
+      // Kiểm tra nếu giỏ hàng không tồn tại
+      if (!cart) {
+        return res.status(200).json({ success: true, data: null, message: "Giỏ hàng không tồn tại" });
+      }
+  
       return res.status(200).json({ success: true, data: cart });
     } catch (error) {
       console.error(error.message);

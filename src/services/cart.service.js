@@ -128,8 +128,9 @@ const clearCart = async () => {
     // Tìm giỏ hàng active (chỉ có một giỏ hàng active cho POS)
     const cart = await Cart.findOne({ status: "active" }).populate("items.foodId");
   
+    // Trả về null nếu không tìm thấy giỏ hàng
     if (!cart) {
-      throw new Error("Giỏ hàng không tồn tại");
+      return null;
     }
   
     return cart;
