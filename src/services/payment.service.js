@@ -2,7 +2,6 @@ const Cart = require("../models/cart.model");
 const Payment = require("../models/payment.model");
 const { createPaymentUrl } = require("../utils/vnpayHelper");
 
-
 const PaymentService = {
   async createPayment(cartId, amountPaid, headers) {
     const cart = await Cart.findById(cartId);
@@ -19,7 +18,7 @@ const PaymentService = {
 
     const paymentUrl = await createPaymentUrl(
       {
-        amount: amountPaid ,
+        amount: amountPaid,
         language: "vn",
         paymentId: payment._id,
       },
@@ -35,12 +34,17 @@ const PaymentService = {
       throw new Error("Cart not found");
     }
 
+    // Create a new payment
     const payment = await Payment.create({
       cartId,
       amountPaid,
       status: "successful",
       paymentMethod: "cash",
     });
+
+    // Update the cart status to 'completed'
+    cart.status = "completed";
+    await cart.save();
 
     return payment;
   },
