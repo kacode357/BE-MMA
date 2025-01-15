@@ -1,7 +1,7 @@
 const moment = require("moment");
 const querystring = require("qs");
 const crypto = require("crypto");
-const config = require("config");
+const config = require("../config/default.json");
 
 const createPaymentUrl = async (body, headers) => {
   try {
@@ -9,10 +9,10 @@ const createPaymentUrl = async (body, headers) => {
     const createDate = moment(date).format("YYYYMMDDHHmmss");
     const ipAddr = headers["x-forwarded-for"] || headers["remote-addr"] || "127.0.0.1";
 
-    const tmnCode = config.get("vnp_TmnCode");
-    const secretKey = config.get("vnp_HashSecret");
-    const vnpUrl = config.get("vnp_Url");
-    const returnUrl = config.get("vnp_ReturnUrl");
+    const tmnCode = config.vnp_TmnCode;
+    const secretKey = config.vnp_HashSecret;
+    const vnpUrl = config.vnp_Url;
+    const returnUrl = config.vnp_ReturnUrl;
 
     const orderId = moment(date).format("DDHHmmss");
     const PaymentId = body.paymentId;
