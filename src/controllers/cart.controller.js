@@ -55,17 +55,32 @@ const removeFromCartController = async (req, res) => {
       // Gọi service để lấy thông tin giỏ hàng
       const cart = await CartService.getCart();
   
-      // Kiểm tra nếu giỏ hàng không tồn tại
+      // Nếu giỏ hàng không tồn tại
       if (!cart) {
-        return res.status(200).json({ success: true, data: null, message: "Giỏ hàng không tồn tại" });
+        return res.status(200).json({
+          success: true,
+          data: { totalItems: 0, items: [] },
+          message: "Giỏ hàng không tồn tại",
+        });
       }
   
-      return res.status(200).json({ success: true, data: cart });
+      // Tính tổng số lượng item trong giỏ hàng
+      const totalItems = cart.items.reduce((total, item) => total + item.quantity, 0);
+  
+      // Thêm totalItems vào data
+      const cartData = {
+        ...cart.toObject(), // Chuyển đổi mongoose document thành plain object
+        totalItems,
+      };
+  
+      return res.status(200).json({ success: true, data: cartData });
     } catch (error) {
       console.error(error.message);
       return res.status(500).json({ success: false, message: error.message || "Lỗi server" });
     }
   };
+  
+  
   const deleteCartController = async (req, res) => {
     try {
       // Gọi service để xóa toàn bộ giỏ hàng
