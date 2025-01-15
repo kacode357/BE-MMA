@@ -27,29 +27,29 @@ const IPNController = {
 
       // Kiểm tra chữ ký
       if (secureHash === signed) {
-        const { vnp_TxnRef: orderId, vnp_OrderInfo: paymentId, vnp_ResponseCode, vnp_Amount } = vnp_Params;
+        const { vnp_OrderInfo: paymentId, vnp_ResponseCode, vnp_Amount } = vnp_Params;
 
-        // Tìm payment trong database bằng vnp_OrderInfo (paymentId)
         const payment = await Payment.findById(paymentId);
-        
+        if (!payment) {
+          return res.status(400).json({ RspCode: "01", Message: "Payment not found" });
+        }
 
-        // Kiểm tra vnp_TxnRef khớp với orderId đã lưu trong Payment
-        // if (payment.txnRef !== orderId) {
-        //   return res.status(404).json({ RspCode: "04", Message: "Invalid orderId" });
-        // }
-
-        // Cập nhật trạng thái thanh toán
         if (vnp_ResponseCode === "00") {
-            const payment = await Payment.findById(paymentId);
-            if (payment) {
-              payment.status = "successful";
-              await payment.save();
-            }
-          } else {
-            payment.status = "failed";
-          }
+          payment.status = "successful";
+          payment.amountPaid = parseInt(vnp_Amount) / 100;
 
-        payment.amountPaid = parseInt(vnp_Amount) / 100; // VNPay trả về amount nhân với 100
+          // Cập nhật trạng thái Cart nếu có cartId
+          if (payment.cartId) {
+            const cart = await Cart.findById(payment.cartId);
+            if (cart) {
+              cart.status = "completed";
+              await cart.save();
+            }
+          }
+        } else {
+          payment.status = "failed";
+        }
+
         await payment.save();
 
         // Trả kết quả thành công về VNPay
@@ -76,3 +76,4 @@ const sortObject = (obj) => {
 };
 
 module.exports = IPNController;
+

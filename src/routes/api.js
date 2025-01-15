@@ -10,10 +10,10 @@ const VnPay = require("./vnpay.route");
 
 const initRoute = (app) => {
   app.use("", CheckApi);
+  app.use("", Ipin);
   app.use("/v1/api", FoodRoute);
   app.use("/v1/api", CartRoute);
   app.use("/api", Payment);
-  app.use("", Ipin);
   app.use("/v1/api", VnPay);
 };
 

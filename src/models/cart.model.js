@@ -30,7 +30,7 @@ const CartSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["active", "completed", "canceled"], // Trạng thái của giỏ hàng
+      enum: ["active", "completed", "canceled"],
       default: "active",
     },
   },
