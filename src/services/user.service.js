@@ -19,43 +19,42 @@ module.exports = {
         });
       }
     }),
-    loginUserService: ({ username, password }) =>
-      new Promise(async (resolve, reject) => {
-        try {
-          // Tìm người dùng theo username
-          const user = await UserModel.findOne({ username });
-  
-          if (!user) {
-            return reject({
-              status: 404,
-              ok: false,
-              message: "Tên người dùng không tồn tại",
-            });
-          }
-  
-          // Kiểm tra mật khẩu
-          const isMatch = await bcrypt.compare(password, user.password);
-          if (!isMatch) {
-            return reject({
-              status: 401,
-              ok: false,
-              message: "Mật khẩu không đúng",
-            });
-          }
-  
-          // Đăng nhập thành công, trả về ID người dùng
-          resolve({
-            status: 200,
-            ok: true,
-            message: "Đăng nhập thành công",
-            user_id: user._id,
-          });
-        } catch (error) {
-          reject({
-            status: 500,
+
+  loginUserService: ({ username, password }) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        // Tìm người dùng theo username
+        const user = await UserModel.findOne({ username });
+
+        if (!user) {
+          return reject({
+            status: 404,
             ok: false,
-            message: error.message || "Lỗi server khi đăng nhập",
+            message: "Sai thông tin đăng nhập",
           });
         }
-      }),
+
+        // So sánh mật khẩu trực tiếp
+        if (user.password !== password) {
+          return reject({
+            status: 401,
+            ok: false,
+            message: "Sai thông tin đăng nhập",
+          });
+        }
+
+        // Đăng nhập thành công, trả về ID người dùng
+        resolve({
+       
+          message: "Đăng nhập thành công",
+          user_id: user._id,
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: error.message || "Lỗi server khi đăng nhập",
+        });
+      }
+    }),
 };
