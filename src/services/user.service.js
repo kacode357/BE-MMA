@@ -30,7 +30,7 @@ module.exports = {
           return reject({
             status: 404,
             ok: false,
-            message: "Sai thông tin đăng nhập",
+            message: "Tên người dùng không tồn tại",
           });
         }
 
@@ -39,13 +39,13 @@ module.exports = {
           return reject({
             status: 401,
             ok: false,
-            message: "Sai thông tin đăng nhập",
+            message: "Mật khẩu không đúng",
           });
         }
 
         // Đăng nhập thành công, trả về ID người dùng
         resolve({
-       
+          status: 200,
           message: "Đăng nhập thành công",
           user_id: user._id,
         });
