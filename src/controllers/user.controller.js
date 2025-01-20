@@ -28,4 +28,27 @@ module.exports = {
       return res.status(500).json({ ok: false, message: "Lỗi server" });
     }
   },
+  loginUserController: async (req, res) => {
+    try {
+      const { username, password } = req.body;
+
+      // Kiểm tra dữ liệu đầu vào
+      if (!username || !password) {
+        return res.status(400).json({
+          ok: false,
+          message: "Tên người dùng và mật khẩu là bắt buộc",
+        });
+      }
+
+      // Gọi service để xử lý logic
+      const result = await UserService.loginUserService({ username, password });
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      return res.status(error.status || 500).json({
+        ok: false,
+        message: error.message || "Lỗi server khi đăng nhập",
+      });
+    }
+  },
 };
