@@ -85,7 +85,7 @@ module.exports = {
             status: 200,
             ok: true,
             message: "Lấy danh sách món ăn thành công",
-            foods: formattedFoods,
+            pageData: formattedFoods,
             pageInfo: {
               pageNum,
               pageSize,
