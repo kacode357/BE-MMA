@@ -67,7 +67,7 @@ module.exports = {
             .populate("category", "name") // Lấy thông tin danh mục
             .skip((pageNum - 1) * pageSize) // Bỏ qua các item trước đó
             .limit(pageSize); // Lấy số item tương ứng với `pageSize`
-  
+          
           // Định dạng dữ liệu món ăn
           const formattedFoods = foods.map((food) => ({
             _id: food._id,
