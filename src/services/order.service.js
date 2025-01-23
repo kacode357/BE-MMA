@@ -83,37 +83,43 @@ module.exports = {
         });
       }
     }),
-  getOrdersService: ({ status }) =>
-    new Promise(async (resolve, reject) => {
-      try {
-        const query = status ? { status } : {}; // Lọc trạng thái nếu được cung cấp
-        const orders = await OrderModel.find(query)
-          .populate("items.food_id", "name price") // Lấy thông tin món ăn
-          .populate("created_by", "_id username"); // Lấy ID và username của người tạo
-
-        // Tính tổng số lượng sản phẩm cho từng đơn hàng
-        const ordersWithTotalItems = orders.map((order) => {
-          const total_items = order.items.reduce((sum, item) => sum + item.quantity, 0);
-          return {
-            ...order.toObject(), // Chuyển document MongoDB sang object để chỉnh sửa
-            total_items,
-          };
-        });
-
-        resolve({
-          status: 200,
-          ok: true,
-          message: "Lấy danh sách đơn hàng thành công",
-          orders: ordersWithTotalItems,
-        });
-      } catch (error) {
-        reject({
-          status: 500,
-          ok: false,
-          message: error.message || "Lỗi khi lấy danh sách đơn hàng",
-        });
-      }
-    }),
+    getOrdersService: ({ status }) =>
+      new Promise(async (resolve, reject) => {
+        try {
+          const query = status ? { status } : {}; // Lọc trạng thái nếu được cung cấp
+          const orders = await OrderModel.find(query)
+            .populate("items.food_id", "name price") // Lấy thông tin món ăn
+            .populate("created_by", "_id username"); // Lấy ID và username của người tạo
+    
+          // Tính tổng số lượng sản phẩm cho từng đơn hàng
+          const ordersWithTotalItems = orders.map((order) => {
+            const total_items = order.items.reduce(
+              (sum, item) => sum + item.quantity,
+              0
+            );
+            return {
+              ...order.toObject(), // Chuyển document MongoDB sang object để chỉnh sửa
+              total_items,
+            };
+          });
+    
+          resolve({
+            status: 200,
+            ok: true,
+            message: "Lấy danh sách đơn hàng thành công",
+            data: {
+              orders: ordersWithTotalItems, // Đặt orders vào bên trong data
+            },
+          });
+        } catch (error) {
+          reject({
+            status: 500,
+            ok: false,
+            message: error.message || "Lỗi khi lấy danh sách đơn hàng",
+          });
+        }
+      }),
+    
 
   // Lấy chi tiết một đơn hàng theo ID
   getOrderByIdService: ({ orderId }) =>
