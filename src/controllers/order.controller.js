@@ -87,7 +87,7 @@ module.exports = {
         });
       }
 
-      const result = await OrderService.increaseFoodQuantityService({ food_id });
+      const result = await OrderService.increaseOrderItemQuantityService({ food_id });
 
       return res.status(result.status).json(result);
     } catch (error) {
@@ -110,7 +110,7 @@ module.exports = {
         });
       }
 
-      const result = await OrderService.decreaseFoodQuantityService({ food_id });
+      const result = await OrderService.decreaseOrderItemQuantityService({ food_id });
 
       return res.status(result.status).json(result);
     } catch (error) {
@@ -120,5 +120,5 @@ module.exports = {
       });
     }
   },
-  
+
 };

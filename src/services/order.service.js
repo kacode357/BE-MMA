@@ -210,107 +210,141 @@ module.exports = {
         });
       }
     }),
-    increaseFoodQuantityService: ({ food_id }) =>
-      new Promise(async (resolve, reject) => {
-        try {
-          // Tìm đơn hàng trạng thái "pending"
-          const order = await OrderModel.findOne({ status: "pending" });
-  
-          if (!order) {
+      // Tăng số lượng sản phẩm (Tạo mới đơn hàng nếu chưa có)
+  // Tăng số lượng sản phẩm
+  increaseOrderItemQuantityService: ({ userId, food_id }) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        // Tìm đơn hàng trạng thái "pending"
+        let order = await OrderModel.findOne({ status: "pending", created_by: userId });
+
+        if (!order) {
+          // Tạo mới đơn hàng nếu chưa có
+          order = await OrderModel.create({
+            created_by: userId,
+            items: [],
+            total_price: 0,
+            status: "pending",
+          });
+        }
+
+        // Tìm món ăn trong danh sách items
+        let foodItem = order.items.find((item) => item.food_id.toString() === food_id);
+
+        if (!foodItem) {
+          // Nếu món ăn chưa tồn tại trong đơn hàng, thêm mới
+          const food = await FoodModel.findById(food_id);
+          if (!food) {
             return reject({
               status: 404,
               ok: false,
-              message: "Không tìm thấy đơn hàng trạng thái 'pending'",
+              message: `Không tìm thấy món ăn với ID: ${food_id}`,
             });
           }
-  
-          // Tìm món ăn trong danh sách items
-          const foodItem = order.items.find((item) => item.food_id.toString() === food_id);
-  
-          if (!foodItem) {
-            return reject({
-              status: 404,
-              ok: false,
-              message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
-            });
-          }
-  
-          // Tăng số lượng món ăn
+
+          foodItem = {
+            food_id: food_id,
+            quantity: 1,
+            price: food.price,
+          };
+
+          order.items.push(foodItem);
+        } else {
+          // Nếu món ăn đã tồn tại, tăng số lượng
           foodItem.quantity += 1;
-  
-          // Tính lại tổng giá trị đơn hàng
-          order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
-  
-          // Lưu đơn hàng
-          await order.save();
-  
-          resolve({
-            status: 200,
-            ok: true,
-            message: `Tăng số lượng món ăn thành công`,
-            order,
-          });
-        } catch (error) {
-          reject({
-            status: 500,
+        }
+
+        // Tính lại tổng giá trị và số lượng món ăn
+        order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
+        const total_items = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+        // Lưu đơn hàng
+        await order.save();
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: `Tăng số lượng món ăn thành công`,
+          order: {
+            ...order.toObject(),
+            total_items,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: error.message || "Lỗi server khi tăng số lượng món ăn",
+        });
+      }
+    }),
+
+  // Giảm số lượng sản phẩm
+  decreaseOrderItemQuantityService: ({ userId, food_id }) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        // Tìm đơn hàng trạng thái "pending"
+        const order = await OrderModel.findOne({ status: "pending", created_by: userId });
+
+        if (!order) {
+          return reject({
+            status: 404,
             ok: false,
-            message: error.message || "Lỗi server khi tăng số lượng món ăn",
+            message: "Không tìm thấy đơn hàng trạng thái 'pending'",
           });
         }
-      }),
-  
-    // Giảm số lượng sản phẩm
-    decreaseFoodQuantityService: ({ food_id }) =>
-      new Promise(async (resolve, reject) => {
-        try {
-          // Tìm đơn hàng trạng thái "pending"
-          const order = await OrderModel.findOne({ status: "pending" });
-  
-          if (!order) {
-            return reject({
-              status: 404,
-              ok: false,
-              message: "Không tìm thấy đơn hàng trạng thái 'pending'",
-            });
-          }
-  
-          // Tìm món ăn trong danh sách items
-          const foodItem = order.items.find((item) => item.food_id.toString() === food_id);
-  
-          if (!foodItem) {
-            return reject({
-              status: 404,
-              ok: false,
-              message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
-            });
-          }
-  
-          // Giảm số lượng món ăn
-          foodItem.quantity -= 1;
-  
-          if (foodItem.quantity <= 0) {
-            // Nếu số lượng <= 0, xóa món ăn khỏi đơn hàng
-            order.items = order.items.filter((item) => item.food_id.toString() !== food_id);
-          }
-  
-          // Tính lại tổng giá trị đơn hàng
-          order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
-  
-          // Lưu đơn hàng
-          await order.save();
-  
-          resolve({
-            status: 200,
-            ok: true,
-            message: `Giảm số lượng món ăn thành công`,
-            order,
-          });
-        } catch (error) {
-          reject({
-            status: 500,
+
+        // Tìm món ăn trong danh sách items
+        const foodItem = order.items.find((item) => item.food_id.toString() === food_id);
+
+        if (!foodItem) {
+          return reject({
+            status: 404,
             ok: false,
-            message: error.message || "Lỗi server khi giảm số lượng món ăn",
+            message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
           });
         }
-      }),
+
+        // Giảm số lượng món ăn
+        foodItem.quantity -= 1;
+
+        if (foodItem.quantity <= 0) {
+          // Nếu số lượng <= 0, xóa món ăn khỏi đơn hàng
+          order.items = order.items.filter((item) => item.food_id.toString() !== food_id);
+        }
+
+        // Tính lại tổng giá trị và số lượng món ăn
+        order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
+        const total_items = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+        if (order.items.length === 0) {
+          // Nếu không còn món nào trong đơn hàng, xóa đơn hàng
+          await OrderModel.deleteOne({ _id: order._id });
+          return resolve({
+            status: 200,
+            ok: true,
+            message: `Đơn hàng đã được xóa vì không còn món ăn nào`,
+          });
+        }
+
+        // Lưu đơn hàng
+        await order.save();
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: `Giảm số lượng món ăn thành công`,
+          order: {
+            ...order.toObject(),
+            total_items,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: error.message || "Lỗi server khi giảm số lượng món ăn",
+        });
+      }
+    }),
 };
