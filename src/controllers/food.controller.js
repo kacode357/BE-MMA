@@ -33,4 +33,18 @@ module.exports = {
       });
     }
   },
+  getFoodsController: async (req, res) => {
+    try {
+      const { searchCondition, pageInfo } = req.body;
+
+      const result = await FoodService.getFoodsService({ searchCondition, pageInfo });
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      return res.status(error.status || 500).json({
+        ok: false,
+        message: error.message || "Lỗi server khi lấy danh sách món ăn",
+      });
+    }
+  },
 };

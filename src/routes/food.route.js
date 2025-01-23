@@ -4,5 +4,6 @@ const router = express.Router();
 
 // API tạo món ăn
 router.post("/foods", FoodController.createFoodController);
+router.post("/foods/search", FoodController.getFoodsController);
 
 module.exports = router;
