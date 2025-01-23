@@ -358,7 +358,7 @@ module.exports = {
         reject({
           status: 500,
           ok: false,
-          message: error.message || "Lỗi server khi giảm số lượng món ăn",
+          message: error.message || "Lỗi server khi giảm số lượng món ăns",
         });
       }
     }),
