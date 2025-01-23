@@ -265,9 +265,11 @@ module.exports = {
           status: 200,
           ok: true,
           message: `Tăng số lượng món ăn thành công`,
-          order: {
-            ...order.toObject(),
-            total_items,
+          data: {
+            order: {
+              ...order.toObject(),
+              total_items,
+            },
           },
         });
       } catch (error) {
@@ -334,9 +336,11 @@ module.exports = {
           status: 200,
           ok: true,
           message: `Giảm số lượng món ăn thành công`,
-          order: {
-            ...order.toObject(),
-            total_items,
+          data: {
+            order: {
+              ...order.toObject(),
+              total_items,
+            },
           },
         });
       } catch (error) {
