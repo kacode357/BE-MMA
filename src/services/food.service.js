@@ -51,24 +51,21 @@ module.exports = {
           const is_delete = searchCondition?.is_delete; // Trạng thái xóa
           const pageNum = pageInfo?.pageNum || 1; // Số trang hiện tại
           const pageSize = pageInfo?.pageSize || 10; // Số item mỗi trang
-  
-          // Nếu `keyword` là chuỗi rỗng, không áp dụng điều kiện tìm kiếm theo tên
+    
           const query = keyword
             ? { name: { $regex: keyword, $options: "i" } }
             : {};
-  
-          if (is_delete !== undefined) query.is_deleted = is_delete; // Thêm điều kiện lọc theo trạng thái xóa nếu có
-  
-          const totalItems = await FoodModel.countDocuments(query); // Tổng số item phù hợp
-          const totalPages = Math.ceil(totalItems / pageSize); // Tổng số trang
-  
-          // Lấy dữ liệu với phân trang
+    
+          if (is_delete !== undefined) query.is_deleted = is_delete;
+    
+          const totalItems = await FoodModel.countDocuments(query);
+          const totalPages = Math.ceil(totalItems / pageSize);
+    
           const foods = await FoodModel.find(query)
-            .populate("category", "name") // Lấy thông tin danh mục
-            .skip((pageNum - 1) * pageSize) // Bỏ qua các item trước đó
-            .limit(pageSize); // Lấy số item tương ứng với `pageSize`
-          
-          // Định dạng dữ liệu món ăn
+            .populate("category", "name")
+            .skip((pageNum - 1) * pageSize)
+            .limit(pageSize);
+    
           const formattedFoods = foods.map((food) => ({
             _id: food._id,
             name: food.name,
@@ -80,17 +77,19 @@ module.exports = {
             updatedAt: food.updatedAt,
             category_name: food.category?.name || null,
           }));
-  
+    
           resolve({
             status: 200,
             ok: true,
             message: "Lấy danh sách món ăn thành công",
-            pageData: formattedFoods,
-            pageInfo: {
-              pageNum,
-              pageSize,
-              totalItems,
-              totalPages,
+            data: {
+              pageData: formattedFoods,
+              pageInfo: {
+                pageNum,
+                pageSize,
+                totalItems,
+                totalPages,
+              },
             },
           });
         } catch (error) {
@@ -100,6 +99,7 @@ module.exports = {
             message: error.message || "Lỗi khi lấy danh sách món ăn",
           });
         }
-      }),
+      })
+    
 
 };
