@@ -76,4 +76,49 @@ module.exports = {
       });
     }
   },
+  increaseFoodQuantityController: async (req, res) => {
+    try {
+      const { food_id } = req.body;
+
+      if (!food_id) {
+        return res.status(400).json({
+          ok: false,
+          message: "Yêu cầu phải có food_id",
+        });
+      }
+
+      const result = await OrderService.increaseFoodQuantityService({ food_id });
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      return res.status(error.status || 500).json({
+        ok: false,
+        message: error.message || "Lỗi server khi tăng số lượng món ăn",
+      });
+    }
+  },
+
+  // Giảm số lượng sản phẩm
+  decreaseFoodQuantityController: async (req, res) => {
+    try {
+      const { food_id } = req.body;
+
+      if (!food_id) {
+        return res.status(400).json({
+          ok: false,
+          message: "Yêu cầu phải có food_id",
+        });
+      }
+
+      const result = await OrderService.decreaseFoodQuantityService({ food_id });
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      return res.status(error.status || 500).json({
+        ok: false,
+        message: error.message || "Lỗi server khi giảm số lượng món ăn",
+      });
+    }
+  },
+  
 };

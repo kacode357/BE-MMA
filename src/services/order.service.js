@@ -210,4 +210,107 @@ module.exports = {
         });
       }
     }),
+    increaseFoodQuantityService: ({ food_id }) =>
+      new Promise(async (resolve, reject) => {
+        try {
+          // Tìm đơn hàng trạng thái "pending"
+          const order = await OrderModel.findOne({ status: "pending" });
+  
+          if (!order) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: "Không tìm thấy đơn hàng trạng thái 'pending'",
+            });
+          }
+  
+          // Tìm món ăn trong danh sách items
+          const foodItem = order.items.find((item) => item.food_id.toString() === food_id);
+  
+          if (!foodItem) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
+            });
+          }
+  
+          // Tăng số lượng món ăn
+          foodItem.quantity += 1;
+  
+          // Tính lại tổng giá trị đơn hàng
+          order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
+  
+          // Lưu đơn hàng
+          await order.save();
+  
+          resolve({
+            status: 200,
+            ok: true,
+            message: `Tăng số lượng món ăn thành công`,
+            order,
+          });
+        } catch (error) {
+          reject({
+            status: 500,
+            ok: false,
+            message: error.message || "Lỗi server khi tăng số lượng món ăn",
+          });
+        }
+      }),
+  
+    // Giảm số lượng sản phẩm
+    decreaseFoodQuantityService: ({ food_id }) =>
+      new Promise(async (resolve, reject) => {
+        try {
+          // Tìm đơn hàng trạng thái "pending"
+          const order = await OrderModel.findOne({ status: "pending" });
+  
+          if (!order) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: "Không tìm thấy đơn hàng trạng thái 'pending'",
+            });
+          }
+  
+          // Tìm món ăn trong danh sách items
+          const foodItem = order.items.find((item) => item.food_id.toString() === food_id);
+  
+          if (!foodItem) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
+            });
+          }
+  
+          // Giảm số lượng món ăn
+          foodItem.quantity -= 1;
+  
+          if (foodItem.quantity <= 0) {
+            // Nếu số lượng <= 0, xóa món ăn khỏi đơn hàng
+            order.items = order.items.filter((item) => item.food_id.toString() !== food_id);
+          }
+  
+          // Tính lại tổng giá trị đơn hàng
+          order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
+  
+          // Lưu đơn hàng
+          await order.save();
+  
+          resolve({
+            status: 200,
+            ok: true,
+            message: `Giảm số lượng món ăn thành công`,
+            order,
+          });
+        } catch (error) {
+          reject({
+            status: 500,
+            ok: false,
+            message: error.message || "Lỗi server khi giảm số lượng món ăn",
+          });
+        }
+      }),
 };
