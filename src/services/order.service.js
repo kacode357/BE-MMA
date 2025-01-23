@@ -221,7 +221,7 @@ module.exports = {
       try {
         // Tìm đơn hàng trạng thái "pending"
         let order = await OrderModel.findOne({ status: "pending", created_by: userId });
-
+  
         if (!order) {
           // Tạo mới đơn hàng nếu chưa có
           order = await OrderModel.create({
@@ -231,10 +231,10 @@ module.exports = {
             status: "pending",
           });
         }
-
+  
         // Tìm món ăn trong danh sách items
         let foodItem = order.items.find((item) => item.food_id.toString() === food_id);
-
+  
         if (!foodItem) {
           // Nếu món ăn chưa tồn tại trong đơn hàng, thêm mới
           const food = await FoodModel.findById(food_id);
@@ -245,35 +245,39 @@ module.exports = {
               message: `Không tìm thấy món ăn với ID: ${food_id}`,
             });
           }
-
+  
           foodItem = {
             food_id: food_id,
             quantity: 1,
             price: food.price,
           };
-
+  
           order.items.push(foodItem);
         } else {
           // Nếu món ăn đã tồn tại, tăng số lượng
           foodItem.quantity += 1;
         }
-
-        // Tính lại tổng giá trị và số lượng món ăn
+  
+        // Tính lại tổng giá trị đơn hàng
         order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
-        const total_items = order.items.reduce((sum, item) => sum + item.quantity, 0);
-
+  
         // Lưu đơn hàng
         await order.save();
-
+  
+        // Populate thông tin
+        const populatedOrder = await OrderModel.findById(order._id)
+          .populate("items.food_id", "name price")
+          .populate("created_by", "_id username");
+  
+        const total_items = populatedOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+  
         resolve({
           status: 200,
           ok: true,
           message: `Tăng số lượng món ăn thành công`,
           data: {
-            order: {
-              ...order.toObject(),
-              total_items,
-            },
+            ...populatedOrder.toObject(),
+            total_items,
           },
         });
       } catch (error) {
@@ -284,14 +288,13 @@ module.exports = {
         });
       }
     }),
-
   // Giảm số lượng sản phẩm
   decreaseOrderItemQuantityService: ({ userId, food_id }) =>
     new Promise(async (resolve, reject) => {
       try {
         // Tìm đơn hàng trạng thái "pending"
         const order = await OrderModel.findOne({ status: "pending", created_by: userId });
-
+  
         if (!order) {
           return reject({
             status: 404,
@@ -299,10 +302,10 @@ module.exports = {
             message: "Không tìm thấy đơn hàng trạng thái 'pending'",
           });
         }
-
+  
         // Tìm món ăn trong danh sách items
         const foodItem = order.items.find((item) => item.food_id.toString() === food_id);
-
+  
         if (!foodItem) {
           return reject({
             status: 404,
@@ -310,19 +313,18 @@ module.exports = {
             message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
           });
         }
-
+  
         // Giảm số lượng món ăn
         foodItem.quantity -= 1;
-
+  
         if (foodItem.quantity <= 0) {
           // Nếu số lượng <= 0, xóa món ăn khỏi đơn hàng
           order.items = order.items.filter((item) => item.food_id.toString() !== food_id);
         }
-
-        // Tính lại tổng giá trị và số lượng món ăn
+  
+        // Tính lại tổng giá trị đơn hàng
         order.total_price = order.items.reduce((total, item) => total + item.price * item.quantity, 0);
-        const total_items = order.items.reduce((sum, item) => sum + item.quantity, 0);
-
+  
         if (order.items.length === 0) {
           // Nếu không còn món nào trong đơn hàng, xóa đơn hàng
           await OrderModel.deleteOne({ _id: order._id });
@@ -332,19 +334,24 @@ module.exports = {
             message: `Đơn hàng đã được xóa vì không còn món ăn nào`,
           });
         }
-
+  
         // Lưu đơn hàng
         await order.save();
-
+  
+        // Populate thông tin
+        const populatedOrder = await OrderModel.findById(order._id)
+          .populate("items.food_id", "name price")
+          .populate("created_by", "_id username");
+  
+        const total_items = populatedOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+  
         resolve({
           status: 200,
           ok: true,
           message: `Giảm số lượng món ăn thành công`,
           data: {
-            order: {
-              ...order.toObject(),
-              total_items,
-            },
+            ...populatedOrder.toObject(),
+            total_items,
           },
         });
       } catch (error) {
@@ -355,4 +362,5 @@ module.exports = {
         });
       }
     }),
+  
 };
