@@ -7,6 +7,6 @@ router.post("/orders", OrderController.createOrderController);
 router.get("/orders", OrderController.getOrdersController);
 router.get("/orders/:orderId", OrderController.getOrderByIdController);
 router.put("/orders/items", OrderController.updateFoodQuantityController);
-router.patch("/orders/items/increase", OrderController.increaseFoodQuantityController);
-router.patch("/orders/items/decrease", OrderController.decreaseFoodQuantityController);
+router.put("/orders/items/increase", OrderController.increaseFoodQuantityController);
+router.put("/orders/items/decrease", OrderController.decreaseFoodQuantityController);
 module.exports = router;
