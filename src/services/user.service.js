@@ -47,7 +47,9 @@ module.exports = {
         resolve({
           status: 200,
           message: "Đăng nhập thành công",
-          user_id: user._id,
+          data: {
+            user_id: user._id,
+          },
         });
       } catch (error) {
         reject({
