@@ -103,13 +103,17 @@ module.exports = {
             };
           });
     
+          // Kiểm tra số lượng đơn hàng và trả kết quả tương ứng
+          const result =
+            ordersWithTotalItems.length === 1
+              ? ordersWithTotalItems[0] // Nếu chỉ có 1 đơn hàng, trả về đối tượng
+              : ordersWithTotalItems; // Nếu nhiều hơn, trả về mảng
+    
           resolve({
             status: 200,
             ok: true,
             message: "Lấy danh sách đơn hàng thành công",
-            data: {
-              orders: ordersWithTotalItems, // Đặt orders vào bên trong data
-            },
+            data: result, // Trả về kết quả ở đây
           });
         } catch (error) {
           reject({
