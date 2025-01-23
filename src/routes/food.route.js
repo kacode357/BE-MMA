@@ -1,9 +1,10 @@
 const express = require("express");
-const FoodController = require("../controllers/food.controller");
+const GroupController = require("../controllers/food.controller");
 const router = express.Router();
 
-// API tạo món ăn
-router.post("/foods", FoodController.createFoodController);
-router.post("/foods/search", FoodController.getFoodsController);
+
+router.post("/foods", GroupController.createFoodController);
+router.post("/foods/search", GroupController.getFoodsController);
+
 
 module.exports = router;

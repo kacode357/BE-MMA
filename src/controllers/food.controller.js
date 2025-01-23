@@ -1,50 +1,61 @@
-const FoodService = require("../services/food.service");
+const GroupService = require("../services/food.service");
 
 module.exports = {
   createFoodController: async (req, res) => {
     try {
       const { name, category, price, description, image_url } = req.body;
-
-      // Kiểm tra dữ liệu đầu vào
+    
       if (!name || !category || !price) {
-        return res.status(400).json({
-          ok: false,
-          message: "Tên, danh mục và giá là bắt buộc",
-        });
+        return res.status(400).json({ message: "Tên, danh mục và giá là bắt buộc" });
       }
-
-      // Gọi service để tạo món ăn
-      const result = await FoodService.createFoodService({
+  
+      const result = await GroupService.createFoodService({
         name,
         category,
         price,
         description,
         image_url,
       });
-
-      return res.status(result.status).json(result);
+  
+      return res.status(201).json(result);
     } catch (error) {
       console.error(error.message);
-
-      // Đảm bảo trả về mã lỗi và thông báo từ service
-      return res.status(error.status || 500).json({
-        ok: false,
-        message: error.message || "Lỗi server",
-      });
+      return res.status(500).json({ ok: false, message: "Lỗi server" });
     }
   },
   getFoodsController: async (req, res) => {
     try {
-      const { searchCondition, pageInfo } = req.body;
+      const { searchCondition = {}, pageInfo = {} } = req.body;
+      const { keyword = "", is_delete = false } = searchCondition;
+      const { pageNum = 1, pageSize = 10 } = pageInfo;
+  
+      const offset = (pageNum - 1) * pageSize;
 
-      const result = await FoodService.getFoodsService({ searchCondition, pageInfo });
-
-      return res.status(result.status).json(result);
-    } catch (error) {
-      return res.status(error.status || 500).json({
-        ok: false,
-        message: error.message || "Lỗi server khi lấy danh sách món ăn",
+      const { foods, total } = await GroupService.getFoodsService({
+        keyword,
+        is_delete,
+        offset,
+        limit: pageSize,
       });
+
+      const totalPages = Math.ceil(total / pageSize);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          pageData: foods,
+          pageInfo: {
+            pageNum,
+            pageSize,
+            totalItems: total,
+            totalPages,
+          },
+        },
+      });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({ success: false, message: "Lỗi server" });
     }
-  },
+  }
+  ,
 };
