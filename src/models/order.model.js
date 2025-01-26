@@ -24,7 +24,7 @@ const orderSchema = new mongoose.Schema(
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true, // Đảm bảo luôn có người tạo đơn
+  
     }, // Nhân viên tạo đơn
   },
   { timestamps: true }
