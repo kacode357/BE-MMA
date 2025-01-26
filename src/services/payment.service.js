@@ -1,56 +1,65 @@
-const Cart = require("../models/cart.model");
 const Payment = require("../models/payment.model");
-const { createPaymentUrl } = require("../utils/vnpayHelper");
+const Order = require("../models/order.model");
 
-const PaymentService = {
-  async createPayment(cartId, amountPaid, headers) {
-    // Fetch the cart to ensure it exists
-    const cart = await Cart.findById(cartId);
-    if (!cart) {
-      throw new Error("Cart not found");
-    }
-  
-    // Create a payment record
-    const payment = await Payment.create({
-      cartId,
-      amountPaid,
-      status: "pending",
-      paymentMethod: "credit_card", // Assuming 'credit_card' as the payment method for this example
-    });
-  
-    // Generate the payment URL
-    const paymentUrl = await createPaymentUrl(
-      {
-        amount: amountPaid,
-        language: "vn", // Vietnamese locale
-        paymentId: payment._id,
-      },
-      headers
-    );
-  
-    // Return the created payment and the generated URL
-    return { payment, paymentUrl };
-  },
-  async createCashPayment(cartId, amountPaid) {
-    const cart = await Cart.findById(cartId);
-    if (!cart) {
-      throw new Error("Cart not found");
+const createPayment = async (data) => {
+  try {
+    // Kiểm tra đơn hàng có tồn tại không
+    const order = await Order.findById(data.order_id);
+    if (!order) {
+      throw new Error("Order does not exist.");
     }
 
-    // Create a new payment
-    const payment = await Payment.create({
-      cartId,
-      amountPaid,
-      status: "successful",
-      paymentMethod: "cash",
-    });
-
-    // Update the cart status to 'completed'
-    cart.status = "completed";
-    await cart.save();
-
+    // Tạo thanh toán mới
+    const payment = new Payment(data);
+    await payment.save();
     return payment;
-  },
+  } catch (error) {
+    throw new Error("Error creating payment: " + error.message);
+  }
 };
 
-module.exports = PaymentService;
+const getPaymentById = async (id) => {
+  try {
+    const payment = await Payment.findById(id).populate("order_id");
+    return payment;
+  } catch (error) {
+    throw new Error("Error retrieving payment: " + error.message);
+  }
+};
+
+const updatePaymentStatus = async (id, status) => {
+  try {
+    // Cập nhật trạng thái của Payment
+    const updatedPayment = await Payment.findByIdAndUpdate(
+      id,
+      { status, paid_at: status === "paid" ? new Date() : null },
+      { new: true }
+    );
+
+    if (!updatedPayment) {
+      throw new Error("Payment not found.");
+    }
+
+    // Nếu trạng thái Payment là "paid", cập nhật Order tương ứng
+    if (status === "paid") {
+      const order = await Order.findById(updatedPayment.order_id);
+      if (order) {
+        order.status = "completed";
+        order.is_paid = true;
+        await order.save();
+      } else {
+        throw new Error("Associated order not found.");
+      }
+    }
+
+    return updatedPayment;
+  } catch (error) {
+    throw new Error("Error updating payment status: " + error.message);
+  }
+};
+
+module.exports = {
+  createPayment,
+  getPaymentById,
+  updatePaymentStatus,
+};

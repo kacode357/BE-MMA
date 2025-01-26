@@ -86,7 +86,7 @@ module.exports = {
     getOrdersService: ({ status }) =>
       new Promise(async (resolve, reject) => {
         try {
-          const query = status ? { status } : {}; // Lọc trạng thái nếu được cung cấp
+            const query = { status: "pending" }; 
           const orders = await OrderModel.find(query)
             .populate("items.food_id", "name price") // Lấy thông tin món ăn
             .populate("created_by", "_id username"); // Lấy ID và username của người tạo
@@ -98,7 +98,7 @@ module.exports = {
               0
             );
             return {
-              ...order.toObject(), // Chuyển document MongoDB sang object để chỉnh sửa
+              ...order.toObject(), 
               total_items,
             };
           });

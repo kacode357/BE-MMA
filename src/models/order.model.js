@@ -11,7 +11,6 @@ const orderSchema = new mongoose.Schema(
     ],
     total_price: { type: Number, required: true },
     status: { type: String, enum: ["pending", "completed", "cancelled"], default: "pending" },
-    payment_method: { type: String, enum: ["cash", "card", "online", "not specified"], default: "not specified" },
     is_paid: { type: Boolean, default: false },
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Nhân viên tạo đơn
   },

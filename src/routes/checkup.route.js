@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const IPNController = require("../controllers/ipin.controller");
+const CheckApi = require("../controllers/checkup.controller");
 
 // Route xử lý IPN callback từ VNPay
-router.get("/vnpay-ipn", IPNController.handleIPN);
+router.get("/", CheckApi.checkApiRunning);
 
 module.exports = router;
