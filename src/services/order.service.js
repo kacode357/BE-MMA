@@ -262,4 +262,65 @@ module.exports = {
         });
       }
     }),
+    decreaseOrderItemQuantityService: ({ food_id }) =>
+      new Promise(async (resolve, reject) => {
+        try {
+          // Tìm đơn hàng trạng thái 'pending'
+          let order = await OrderModel.findOne({ status: "pending" });
+    
+          if (!order) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: "Không tìm thấy đơn hàng trạng thái 'pending'",
+            });
+          }
+    
+          // Tìm món ăn trong đơn hàng
+          let foodItem = order.items.find(
+            (item) => item.food_id.toString() === food_id
+          );
+    
+          if (!foodItem) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: `Không tìm thấy món ăn với ID: ${food_id} trong đơn hàng`,
+            });
+          }
+    
+          // Giảm số lượng món ăn
+          foodItem.quantity -= 1;
+    
+          // Nếu số lượng giảm về 0, xóa món ăn khỏi đơn hàng
+          if (foodItem.quantity === 0) {
+            order.items = order.items.filter(
+              (item) => item.food_id.toString() !== food_id
+            );
+          }
+    
+          // Tính lại tổng giá trị đơn hàng
+          order.total_price = order.items.reduce(
+            (total, item) => total + item.price * item.quantity,
+            0
+          );
+    
+          // Lưu thay đổi
+          await order.save();
+    
+          resolve({
+            status: 200,
+            ok: true,
+            message: "Giảm số lượng món ăn thành công",
+            data: order,
+          });
+        } catch (error) {
+          reject({
+            status: 500,
+            ok: false,
+            message: error.message || "Lỗi server khi giảm số lượng món ăn",
+          });
+        }
+      }),
+    
 };
