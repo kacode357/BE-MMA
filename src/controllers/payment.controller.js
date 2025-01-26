@@ -5,7 +5,10 @@ const createPayment = async (req, res) => {
     const { order_id, amount, method } = req.body;
 
     if (!order_id || !amount || !method) {
-      return res.status(400).json({ message: "Missing required fields." });
+      return res.status(400).json({
+        data: null,
+        message: "Missing required fields.",
+      });
     }
 
     const payment = await paymentService.createPayment({
@@ -14,18 +17,18 @@ const createPayment = async (req, res) => {
       method,
     });
 
-    const data = {
+    return res.status(201).json({
+      data: { payment },
       message: "Payment created successfully.",
-      payment,
-    };
-
-    return res.status(201).json(data);
-
-   
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      data: null,
+      message: error.message,
+    });
   }
 };
+
 
 const getPayment = async (req, res) => {
   try {
