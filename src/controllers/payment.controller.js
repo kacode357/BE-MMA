@@ -14,7 +14,14 @@ const createPayment = async (req, res) => {
       method,
     });
 
-    return res.status(201).json({ message: "Payment created successfully.", payment });
+    const data = {
+      message: "Payment created successfully.",
+      payment,
+    };
+
+    return res.status(201).json(data);
+
+   
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -43,28 +50,38 @@ const getPayment = async (req, res) => {
 const updatePaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, method } = req.body;
 
-    if (!id || !status) {
+    if (!id || !status || !method) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
     const validStatuses = ["paid", "unpaid", "refunded"];
+    const validMethods = ["cash", "qr_code"];
+    
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid payment status." });
     }
 
-    const updatedPayment = await paymentService.updatePaymentStatus(id, status);
+    if (!validMethods.includes(method)) {
+      return res.status(400).json({ message: "Invalid payment method." });
+    }
+
+    const updatedPayment = await paymentService.updatePaymentStatus(id, status, method);
 
     if (!updatedPayment) {
       return res.status(404).json({ message: "Payment not found." });
     }
 
-    return res.status(200).json({ message: "Payment status updated successfully.", payment: updatedPayment });
+    return res.status(200).json({ 
+      message: "Payment status and method updated successfully.", 
+      payment: updatedPayment 
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 module.exports = {
   createPayment,

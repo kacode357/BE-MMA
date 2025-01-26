@@ -27,12 +27,16 @@ const getPaymentById = async (id) => {
   }
 };
 
-const updatePaymentStatus = async (id, status) => {
+const updatePaymentStatus = async (id, status, method) => {
   try {
-    // Cập nhật trạng thái của Payment
+    // Cập nhật trạng thái và phương thức thanh toán của Payment
     const updatedPayment = await Payment.findByIdAndUpdate(
       id,
-      { status, paid_at: status === "paid" ? new Date() : null },
+      { 
+        status, 
+        method, 
+        paid_at: status === "paid" ? new Date() : null 
+      },
       { new: true }
     );
 
@@ -46,6 +50,7 @@ const updatePaymentStatus = async (id, status) => {
       if (order) {
         order.status = "completed";
         order.is_paid = true;
+        order.payment_method = method; // Cập nhật method vào Order
         await order.save();
       } else {
         throw new Error("Associated order not found.");
@@ -57,6 +62,7 @@ const updatePaymentStatus = async (id, status) => {
     throw new Error("Error updating payment status: " + error.message);
   }
 };
+
 
 module.exports = {
   createPayment,
