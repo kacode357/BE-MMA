@@ -63,8 +63,53 @@ const updatePaymentStatus = async (id, status, method) => {
   }
 };
 
+const getPaymentDashboard = async () => {
+  try {
+    // Tổng số thanh toán đã được trả thành công (status = "paid")
+    const totalPaidPayments = await Payment.countDocuments({ status: "paid" });
 
+    // Tổng số tiền đã thanh toán thành công
+    const totalPaidAmount = await Payment.aggregate([
+      { $match: { status: "paid" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    // Thống kê phương thức thanh toán thành công (cash, qr_code)
+    const paymentMethodStats = await Payment.aggregate([
+      { $match: { status: "paid" } },
+      { $group: { _id: "$method", count: { $sum: 1 } } }
+    ]);
+
+    // Tổng số đơn hàng đã thanh toán thành công
+    const totalPaidOrders = await Order.countDocuments({ is_paid: true });
+
+    // Tổng doanh thu từ các đơn hàng đã thanh toán thành công
+    const totalRevenue = await Order.aggregate([
+      { $match: { is_paid: true } },
+      { $group: { _id: null, total: { $sum: "$total_price" } } }
+    ]);
+
+    // Danh sách đơn hàng gần đây đã thanh toán thành công
+    const recentPaidOrders = await Order.find({ is_paid: true })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("created_by", "name") // Lấy thông tin nhân viên tạo đơn
+      .populate("items.food_id", "name price"); // Lấy thông tin món ăn trong đơn
+
+    return {
+      totalPaidPayments,
+      totalPaidAmount: totalPaidAmount.length > 0 ? totalPaidAmount[0].total : 0,
+      paymentMethodStats,
+      totalPaidOrders,
+      totalRevenue: totalRevenue.length > 0 ? totalRevenue[0].total : 0,
+      recentPaidOrders,
+    };
+  } catch (error) {
+    throw new Error("Error retrieving dashboard data: " + error.message);
+  }
+};
 module.exports = {
+  getPaymentDashboard,
   createPayment,
   getPaymentById,
   updatePaymentStatus,

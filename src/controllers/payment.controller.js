@@ -85,8 +85,22 @@ const updatePaymentStatus = async (req, res) => {
   }
 };
 
-
+const getPaymentDashboard = async (req, res) => {
+  try {
+    const dashboardData = await paymentService.getPaymentDashboard();
+    
+    return res.status(200).json({
+      data: dashboardData,
+      message: "Dashboard data retrieved successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 module.exports = {
+  getPaymentDashboard,
   createPayment,
   getPayment,
   updatePaymentStatus,

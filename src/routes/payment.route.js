@@ -11,6 +11,6 @@ router.get("/payment/:id", PaymentController.getPayment);
 // Cập nhật trạng thái thanh toán
 router.put("/payment/:id", PaymentController.updatePaymentStatus);
 
-
+router.get("/dashboard/payment", PaymentController.getPaymentDashboard);
 
 module.exports = router;
