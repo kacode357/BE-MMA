@@ -327,26 +327,26 @@ module.exports = {
           try {
             // Điều kiện tìm kiếm đơn hàng
             const query = {};
-    
+      
             if (searchCondition?.status) {
               query.status = searchCondition.status; // Lọc theo trạng thái đơn hàng
             }
-    
+      
             if (searchCondition?.keyword) {
               query._id = searchCondition.keyword; // Tìm kiếm theo order_id
             }
-    
+      
             // Xử lý phân trang
             const limit = pageInfo?.pageSize || 10;
             const page = pageInfo?.pageNum || 1;
-    
+      
             const orders = await OrderModel.find(query)
               .populate("items.food_id", "name price")
               .skip((page - 1) * limit)
               .limit(limit);
-    
+      
             const totalOrders = await OrderModel.countDocuments(query);
-    
+      
             const result = orders.map((order) => ({
               order_id: order._id,
               total_price: order.total_price,
@@ -358,16 +358,19 @@ module.exports = {
                 price: item.price,
               })),
             }));
-    
+      
             resolve({
               status: 200,
               ok: true,
               message: "Tìm kiếm đơn hàng thành công",
               data: {
-                orders: result,
-                totalOrders,
-                totalPages: Math.ceil(totalOrders / limit),
-                currentPage: page,
+                pageData: result,
+                pageInfo: {
+                  totalOrders,
+                  totalPages: Math.ceil(totalOrders / limit),
+                  currentPage: page,
+                  pageSize: limit,
+                },
               },
             });
           } catch (error) {
@@ -377,5 +380,6 @@ module.exports = {
               message: error.message || "Lỗi server khi tìm kiếm đơn hàng",
             });
           }
-        }),
+        })
+      
 };
