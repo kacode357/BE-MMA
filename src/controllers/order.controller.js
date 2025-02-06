@@ -120,5 +120,18 @@ module.exports = {
       });
     }
   },
+  searchDashboardOrdersController: async (req, res) => {
+    try {
+      const { searchCondition, pageInfo } = req.body; // Lọc và phân trang từ request body
 
+      const result = await OrderService.searchDashboardOrdersService({ searchCondition, pageInfo });
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      return res.status(error.status || 500).json({
+        ok: false,
+        message: error.message || "Lỗi server khi tìm kiếm đơn hàng",
+      });
+    }
+  },
 };
