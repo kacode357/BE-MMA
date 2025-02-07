@@ -42,25 +42,57 @@ module.exports = {
   getFoodsService: ({ searchCondition, pageInfo }) =>
     new Promise(async (resolve, reject) => {
       try {
-        const keyword = searchCondition?.keyword || ""; 
-        const is_delete = searchCondition?.is_delete; 
+        const keyword = searchCondition?.keyword || "";
+        const is_delete = searchCondition?.is_delete;
+        const categoryName = searchCondition?.categoryName || ""; // Thêm categoryName vào điều kiện tìm kiếm
         const pageNum = pageInfo?.pageNum || 1;
-        const pageSize = pageInfo?.pageSize || 10; 
-
-        const query = keyword
-          ? { name: { $regex: keyword, $options: "i" } }
-          : {};
-
-        if (is_delete !== undefined) query.is_deleted = is_delete;
-
+        const pageSize = pageInfo?.pageSize || 10;
+  
+        let query = {};
+  
+        // Tìm kiếm theo tên món ăn
+        if (keyword) {
+          query.name = { $regex: keyword, $options: "i" };
+        }
+  
+        // Lọc theo trạng thái xóa
+        if (is_delete !== undefined) {
+          query.is_deleted = is_delete;
+        }
+  
+        // Nếu có categoryName, tìm kiếm theo tên danh mục
+        if (categoryName) {
+          // Tìm category có tên phù hợp
+          const category = await CategoryModel.findOne({ name: { $regex: categoryName, $options: "i" } });
+  
+          if (category) {
+            query.category = category._id; // Lọc theo _id của category nếu tìm thấy
+          } else {
+            return resolve({
+              status: 200,
+              ok: true,
+              message: "Không tìm thấy danh mục nào phù hợp",
+              data: {
+                pageData: [],
+                pageInfo: {
+                  pageNum,
+                  pageSize,
+                  totalItems: 0,
+                  totalPages: 0,
+                },
+              },
+            });
+          }
+        }
+  
         const totalItems = await FoodModel.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
-
+  
         const foods = await FoodModel.find(query)
-          .populate("category", "name")
+          .populate("category", "name") // Lấy thông tin category
           .skip((pageNum - 1) * pageSize)
           .limit(pageSize);
-
+  
         const formattedFoods = foods.map((food) => ({
           _id: food._id,
           name: food.name,
@@ -73,7 +105,7 @@ module.exports = {
           category_name: food.category?.name || null,
           category_id: food.category?._id || null,
         }));
-
+  
         resolve({
           status: 200,
           ok: true,
@@ -96,6 +128,7 @@ module.exports = {
         });
       }
     }),
+  
  // Lấy món ăn theo ID
 getFoodByIdService: (id) =>
   new Promise(async (resolve, reject) => {
