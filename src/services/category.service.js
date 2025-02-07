@@ -181,4 +181,43 @@ module.exports = {
         });
       }
     }),
+    getCategoryStatsService: () =>
+      new Promise(async (resolve, reject) => {
+        try {
+          const categoryStats = await CategoryModel.aggregate([
+       
+            {
+              $match: { is_deleted: false },
+            },
+        
+            {
+              $lookup: {
+                from: "foods", // Bảng món ăn
+                localField: "_id",
+                foreignField: "category", 
+                as: "foodList",
+              },
+            },
+            {
+              $project: {
+                categoryName: "$name", // Lấy tên danh mục
+                totalFoods: { $size: "$foodList" }, // Đếm số lượng món ăn
+              },
+            },
+          ]);
+    
+          resolve({
+            status: 200,
+            ok: true,
+            message: "Lấy dữ liệu thống kê danh mục thành công",
+            data: categoryStats,
+          });
+        } catch (error) {
+          reject({
+            status: 500,
+            ok: false,
+            message: "Lỗi khi lấy dữ liệu thống kê danh mục. " + error.message,
+          });
+        }
+      })
 };

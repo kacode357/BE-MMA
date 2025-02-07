@@ -91,4 +91,16 @@ module.exports = {
         });
       }
     },
+    getCategoryStatsController: async (req, res) => {
+      try {
+        const result = await CategoryService.getCategoryStatsService();
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error("Error in getCategoryStatsController:", error.message);
+        return res.status(error.status || 500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi lấy dữ liệu thống kê danh mục",
+        });
+      }
+    },
 };
