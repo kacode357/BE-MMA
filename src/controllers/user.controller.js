@@ -133,8 +133,8 @@ module.exports = {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-  
-      return res.status(200).json(user); // Return the user data
+    
+      return res.status(200).json({ ok: true, message: "User found", data: user }); // Return the user data
     } catch (error) {
       console.error("Error getting user:", error);
       return res.status(500).json({ message: "Internal server error" });
