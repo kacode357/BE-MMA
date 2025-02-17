@@ -117,26 +117,15 @@ module.exports = {
         console.log(userId);
         // Tìm người dùng theo userId và chỉ lấy các thông tin cần thiết (locations)
         const user = await UserModel.findById(userId).select("locations");
-    
+  
         if (!user) {
           throw new Error("User not found");
         }
-    
-        // Sắp xếp locations theo thời gian mới nhất
-        user.locations.sort((a, b) => {
-          // Convert timestamps to Date objects to compare
-          const dateA = new Date(a.timestamp);
-          const dateB = new Date(b.timestamp);
-    
-          // Sort in descending order (most recent first)
-          return dateB - dateA;
-        });
-    
-        return user.locations; // Return sorted locations
+  
+        return user; // Trả về thông tin người dùng có trường locations
       } catch (error) {
         throw new Error(error.message || "Lỗi khi lấy vị trí người dùng");
       }
-    }
-    
+    },
   
 };
