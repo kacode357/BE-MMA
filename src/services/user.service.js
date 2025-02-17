@@ -114,7 +114,7 @@ module.exports = {
     },
     getUserLocationsService: async (userId) => {
       try {
-       console.log(userId);
+        console.log(userId);
         // Tìm người dùng theo userId và chỉ lấy các thông tin cần thiết (locations)
         const user = await UserModel.findById(userId).select("locations");
   
@@ -127,4 +127,5 @@ module.exports = {
         throw new Error(error.message || "Lỗi khi lấy vị trí người dùng");
       }
     },
+  
 };

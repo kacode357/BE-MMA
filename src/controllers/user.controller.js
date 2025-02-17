@@ -91,8 +91,18 @@ module.exports = {
   },
   getMyLocationController: async (req, res) => {
     try {
-      const userId = req.body;
-      const user = await UserService.getUserLocationsService(userId.userId);
+      // Lấy userId từ route parameter
+      const { userid } = req.params;
+
+      // Kiểm tra nếu userId không có
+      if (!userid) {
+        return res.status(400).json({
+          ok: false,
+          message: "Thiếu userId",
+        });
+      }
+
+      const user = await UserService.getUserLocationsService(userid);
 
       if (!user) {
         return res.status(404).json({
@@ -114,4 +124,5 @@ module.exports = {
       });
     }
   },
+
 };
