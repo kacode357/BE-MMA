@@ -27,7 +27,7 @@ module.exports = {
   },
 
  // Controller - loginUserController
-loginUserController: async (req, res) => {
+ loginUserController: async (req, res) => {
   try {
     const { username, password, latitude, longitude } = req.body;
 
@@ -45,6 +45,7 @@ loginUserController: async (req, res) => {
     return res.status(result.status).json({
       message: result.message,
       data: {
+        user_id: result.data.user_id,  // Include user_id here
         access_token: result.data.access_token,
         refresh_token: result.data.refresh_token,
       },
@@ -56,6 +57,7 @@ loginUserController: async (req, res) => {
     });
   }
 },
+
   refreshTokenController: async (req, res) => {
     try {
       const { access_token, refresh_token } = req.body;
