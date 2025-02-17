@@ -26,35 +26,36 @@ module.exports = {
     }
   },
 
-  loginUserController: async (req, res) => {
-    try {
-      const { username, password } = req.body;
+ // Controller - loginUserController
+loginUserController: async (req, res) => {
+  try {
+    const { username, password, latitude, longitude } = req.body;
 
-      // Kiểm tra dữ liệu đầu vào
-      if (!username || !password) {
-        return res.status(400).json({
-          ok: false,
-          message: "Tên người dùng và mật khẩu là bắt buộc",
-        });
-      }
-
-      // Gọi service để xử lý logic đăng nhập và tạo token
-      const result = await UserService.loginUserService({ username, password });
-
-      return res.status(result.status).json({
-        message: result.message,
-        data: {
-          access_token: result.data.access_token,
-          refresh_token: result.data.refresh_token,
-        },
-      });
-    } catch (error) {
-      return res.status(error.status || 500).json({
+    // Kiểm tra dữ liệu đầu vào
+    if (!username || !password) {
+      return res.status(400).json({
         ok: false,
-        message: error.message || "Lỗi server khi đăng nhập",
+        message: "Tên người dùng và mật khẩu là bắt buộc",
       });
     }
-  },
+
+    // Gọi service để xử lý logic đăng nhập và tạo token
+    const result = await UserService.loginUserService({ username, password, latitude, longitude });
+
+    return res.status(result.status).json({
+      message: result.message,
+      data: {
+        access_token: result.data.access_token,
+        refresh_token: result.data.refresh_token,
+      },
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      ok: false,
+      message: error.message || "Lỗi server khi đăng nhập",
+    });
+  }
+},
   refreshTokenController: async (req, res) => {
     try {
       const { access_token, refresh_token } = req.body;
