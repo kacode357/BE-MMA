@@ -87,4 +87,29 @@ loginUserController: async (req, res) => {
       });
     }
   },
+  getMyLocationController: async (req, res) => {
+    try {
+      const userId = req.body;
+      const user = await UserService.getUserLocationsService(userId.userId);
+
+      if (!user) {
+        return res.status(404).json({
+          ok: false,
+          message: "Người dùng không tồn tại",
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        message: "Lấy vị trí thành công",
+        data: user.locations, // Trả về mảng locations
+      });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({
+        ok: false,
+        message: error.message || "Lỗi server khi lấy vị trí",
+      });
+    }
+  },
 };

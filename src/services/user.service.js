@@ -111,4 +111,19 @@ loginUserService: ({ username, password, latitude, longitude }) =>
         throw new Error(error.message || "Error validating tokens");
       }
     },
+    getUserLocationsService: async (userId) => {
+      try {
+       console.log(userId);
+        // Tìm người dùng theo userId và chỉ lấy các thông tin cần thiết (locations)
+        const user = await UserModel.findById(userId).select("locations");
+  
+        if (!user) {
+          throw new Error("User not found");
+        }
+  
+        return user; // Trả về thông tin người dùng có trường locations
+      } catch (error) {
+        throw new Error(error.message || "Lỗi khi lấy vị trí người dùng");
+      }
+    },
 };
