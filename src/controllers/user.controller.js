@@ -124,5 +124,35 @@ module.exports = {
       });
     }
   },
-
+   getUserByIdController : async (req, res) => {
+    try {
+      const { userid } = req.params; // Extract the userId from the request parameters
+      console.log(userid);
+      const user = await UserService.getUserById(userid); // Call the service to fetch user by ID
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      return res.status(200).json(user); // Return the user data
+    } catch (error) {
+      console.error("Error getting user:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+   updateUserController : async (req, res) => {
+    try {
+      const { userid } = req.params; // Extract the userId from the request parameters
+      const updateData = req.body; // Get the data to update from the request body
+  
+      // Validate the updateData if needed (e.g., check for required fields)
+  
+      const updatedUser = await UserService.updateUser(userid, updateData); // Call the service to update the user
+      
+      return res.status(200).json(updatedUser); // Return the updated user data
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
 };

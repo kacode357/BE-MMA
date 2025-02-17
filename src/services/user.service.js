@@ -130,6 +130,28 @@ module.exports = {
         throw new Error(error.message || "Lỗi khi lấy vị trí người dùng");
       }
     },
+    getUserById : async (userid) => {
+      try {
+        const user = await UserModel.findById(userid); // Find user by ID
+        return user;
+      } catch (error) {
+        throw new Error("Error fetching user: " + error.message);
+      }
+    },
+     updateUser : async (userid, updateData) => {
+      try {
+        // Find the user by ID and update it with new data
+        const updatedUser = await UserModel.findByIdAndUpdate(userid, updateData, { new: true });
+    
+        if (!updatedUser) {
+          throw new Error("User not found");
+        }
+    
+        return updatedUser; // Return the updated user data
+      } catch (error) {
+        throw new Error("Error updating user: " + error.message);
+      }
+    },
     
     
 };
