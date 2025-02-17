@@ -122,9 +122,8 @@ module.exports = {
           throw new Error("User not found");
         }
     
-        // Giả sử mỗi location có trường `createdAt` hoặc `timestamp`
         // Sắp xếp locations theo thứ tự mới nhất ở đầu (giảm dần theo thời gian)
-        user.locations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        user.locations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
         return user; // Trả về thông tin người dùng với locations đã được sắp xếp
       } catch (error) {
@@ -132,5 +131,5 @@ module.exports = {
       }
     },
     
-  
+    
 };
