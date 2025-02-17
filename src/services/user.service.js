@@ -36,7 +36,7 @@ loginUserService: ({ username, password, latitude, longitude }) =>
         });
       }
 
-      // So sánh mật khẩu trực tiếp
+      // So sánh mật khẩu
       if (user.password !== password) {
         return reject({
           status: 401,
@@ -45,25 +45,27 @@ loginUserService: ({ username, password, latitude, longitude }) =>
         });
       }
 
-      // Cập nhật latitude và longitude nếu có
-      if (latitude && longitude) {
-        user.latitude = latitude;
-        user.longitude = longitude;
-        await user.save(); // Lưu thông tin mới
-      }
+      // Thêm vị trí mới vào mảng locations
+      user.locations.push({
+        latitude,
+        longitude,
+        timestamp: new Date(),
+      });
+
+      // Lưu lại user với thông tin vị trí mới
+      await user.save();
 
       // Tạo access token và refresh token sau khi đăng nhập thành công
       const accessToken = jwt.sign(
-        { user_id: user._id },  // Payload của token
-        process.env.JWT_SECRET_KEY, // Mã bí mật để mã hóa token
-        { expiresIn: "1h" } // Token hết hạn sau 1 giờ
+        { user_id: user._id },
+        process.env.JWT_SECRET_KEY,
+        { expiresIn: "1h" }
       );
 
-      // Tạo refresh token
       const refreshToken = jwt.sign(
-        { user_id: user._id },  // Payload của refresh token
-        process.env.JWT_REFRESH_SECRET_KEY, // Mã bí mật để mã hóa refresh token
-        { expiresIn: "7d" } // Refresh token hết hạn sau 7 ngày
+        { user_id: user._id },
+        process.env.JWT_REFRESH_SECRET_KEY,
+        { expiresIn: "7d" }
       );
 
       // Đăng nhập thành công, trả về access token và refresh token

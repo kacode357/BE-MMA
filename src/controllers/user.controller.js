@@ -32,10 +32,10 @@ loginUserController: async (req, res) => {
     const { username, password, latitude, longitude } = req.body;
 
     // Kiểm tra dữ liệu đầu vào
-    if (!username || !password) {
+    if (!username || !password || latitude === undefined || longitude === undefined) {
       return res.status(400).json({
         ok: false,
-        message: "Tên người dùng và mật khẩu là bắt buộc",
+        message: "Tên người dùng, mật khẩu và vị trí là bắt buộc",
       });
     }
 

@@ -6,8 +6,13 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "staff"], default: "staff" },
     is_active: { type: Boolean, default: true },
-    latitude: { type: Number, required: false },  // Latitude field
-    longitude: { type: Number, required: false }, // Longitude field
+    locations: [
+      {
+        latitude: { type: Number, required: true },
+        longitude: { type: Number, required: true },
+        timestamp: { type: Date, default: Date.now }, // Thời gian ghi nhận vị tr
+      },
+    ],
   },
   { timestamps: true }
 );
