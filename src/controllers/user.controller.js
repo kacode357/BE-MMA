@@ -32,7 +32,7 @@ module.exports = {
     const { username, password, latitude, longitude } = req.body;
 
     // Kiểm tra dữ liệu đầu vào
-    if (!username || !password || latitude === undefined || longitude === undefined) {
+    if (!username || !password ) {
       return res.status(400).json({
         ok: false,
         message: "Tên người dùng, mật khẩu và vị trí là bắt buộc",
