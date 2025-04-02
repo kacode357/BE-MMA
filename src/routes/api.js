@@ -1,20 +1,18 @@
-// const AuthRoute = require("./auth.route");
-// const UserRoute = require("./user.route");
-const CheckApi = require("./checkapi.route");
+
+const CategoryRoute = require("./category.route");
 const FoodRoute = require("./food.route");
-const CartRoute = require("./cart.route");
+const Oder = require("./order.route");
+const CheckApi = require("./checkup.route");
 const Payment = require("./payment.route");
-const Ipin = require("./ipin.route");
-const VnPay = require("./vnpay.route");
-
-
+const User = require("./user.route");
 const initRoute = (app) => {
   app.use("", CheckApi);
-  app.use("", Ipin);
+  app.use("/v1/api", CategoryRoute);
   app.use("/v1/api", FoodRoute);
-  app.use("/v1/api", CartRoute);
-  app.use("/api", Payment);
-  app.use("/v1/api", VnPay);
+  app.use("/v1/api", Oder);
+  app.use("/v1/api", Payment);
+  app.use("/v1/api", User);
+
 };
 
 module.exports = initRoute;

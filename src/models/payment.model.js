@@ -1,29 +1,14 @@
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
 
-const PaymentSchema = new Schema(
+const paymentSchema = new mongoose.Schema(
   {
-    testId: {
-      type: String, // Cho phép nhập bất kỳ giá trị nào (không ràng buộc ObjectId)
-      required: true,
-    },
-    amountPaid: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    paymentMethod: {
-      type: String,
-      enum: ["cash", "credit_card", "debit_card", "other"],
-      default: "cash",
-    },
-    status: {
-      type: String,
-      enum: ["pending", "successful", "failed"],
-      default: "pending",
-    },
+    order_id: { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
+    amount: { type: Number, required: true },
+    method: { type: String, enum: ["cash", "qr_code"], required: true },
+    status: { type: String, enum: ["paid", "unpaid", "refunded", "cancelled"], default: "unpaid" },
+    paid_at: { type: Date },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Payment", PaymentSchema);
+module.exports = mongoose.model("Payment", paymentSchema);
