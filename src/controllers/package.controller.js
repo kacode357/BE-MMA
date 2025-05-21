@@ -4,20 +4,25 @@ module.exports = {
   createPackageController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { package_name, description, price, user_id } = req.body;
+        const { package_name, description, price, img_url, user_id } = req.body;
 
         const result = await PackageService.createPackageService({
           package_name,
           description,
           price,
+          img_url,
           user_id,
         });
 
-        return res.status(result.status).json(result);
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message,
+          data: result.data, // Dữ liệu nằm trong data
+        });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({
-          ok: false,
+          status: 500,
           message: error.message || "Lỗi server khi tạo gói",
         });
       }
@@ -34,11 +39,15 @@ module.exports = {
           package_id,
         });
 
-        return res.status(result.status).json(result);
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message,
+          data: result.data, // Dữ liệu nằm trong data
+        });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({
-          ok: false,
+          status: 500,
           message: error.message || "Lỗi server khi kiểm tra quyền sử dụng gói",
         });
       }

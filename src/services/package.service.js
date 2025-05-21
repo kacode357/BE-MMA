@@ -7,7 +7,7 @@ module.exports = {
   createPackageService: (packageData) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { package_name, description, price, user_id } = packageData;
+        const { package_name, description, price, img_url, user_id } = packageData;
 
         if (!user_id) {
           return reject({
@@ -42,16 +42,24 @@ module.exports = {
           });
         }
 
-        await PackageModel.create({
+        const newPackage = await PackageModel.create({
           package_name,
           description,
           price,
+          img_url, // Lưu img_url vào database
         });
 
         resolve({
           status: 201,
-          ok: true,
           message: "Tạo gói thành công",
+          data: {
+            package_id: newPackage._id,
+            package_name: newPackage.package_name,
+            description: newPackage.description,
+            price: newPackage.price,
+            img_url: newPackage.img_url,
+            created_at: newPackage.created_at,
+          },
         });
       } catch (error) {
         reject({
@@ -95,9 +103,18 @@ module.exports = {
         if (user.role === "premium") {
           return resolve({
             status: 200,
-            ok: true,
             message: "Có quyền sử dụng gói với role Premium",
-            data: { has_access: true },
+            data: {
+              has_access: true,
+              package: {
+                package_id: package._id,
+                package_name: package.package_name,
+                description: package.description,
+                price: package.price,
+                img_url: package.img_url, // Thêm img_url vào dữ liệu trả về
+                created_at: package.created_at,
+              },
+            },
           });
         }
 
@@ -105,9 +122,18 @@ module.exports = {
         if (package.price === 0) {
           return resolve({
             status: 200,
-            ok: true,
             message: "Có quyền sử dụng gói miễn phí",
-            data: { has_access: true },
+            data: {
+              has_access: true,
+              package: {
+                package_id: package._id,
+                package_name: package.package_name,
+                description: package.description,
+                price: package.price,
+                img_url: package.img_url, // Thêm img_url vào dữ liệu trả về
+                created_at: package.created_at,
+              },
+            },
           });
         }
 
@@ -120,9 +146,18 @@ module.exports = {
         if (purchase) {
           return resolve({
             status: 200,
-            ok: true,
             message: "Có quyền sử dụng gói đã mua",
-            data: { has_access: true },
+            data: {
+              has_access: true,
+              package: {
+                package_id: package._id,
+                package_name: package.package_name,
+                description: package.description,
+                price: package.price,
+                img_url: package.img_url, // Thêm img_url vào dữ liệu trả về
+                created_at: package.created_at,
+              },
+            },
           });
         }
 
@@ -134,9 +169,18 @@ module.exports = {
         if (groupMember) {
           return resolve({
             status: 200,
-            ok: true,
             message: "Có quyền sử dụng gói qua nhóm",
-            data: { has_access: true },
+            data: {
+              has_access: true,
+              package: {
+                package_id: package._id,
+                package_name: package.package_name,
+                description: package.description,
+                price: package.price,
+                img_url: package.img_url, // Thêm img_url vào dữ liệu trả về
+                created_at: package.created_at,
+              },
+            },
           });
         }
 
