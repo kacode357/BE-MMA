@@ -1,3 +1,4 @@
+const PackageService = require("../services/package.service");
 const UserService = require("../services/user.service");
 
 module.exports = {
@@ -15,7 +16,7 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
-          message: result.message || "User created successfully",
+          message: result.message || "Tạo người dùng thành công",
         });
       } catch (error) {
         console.error(error.message);
@@ -32,7 +33,7 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
-          message: result.message || "Login successful",
+          message: result.message || "Đăng nhập thành công",
           data: {
             access_token: result.access_token,
             refresh_token: result.refresh_token,
@@ -55,11 +56,10 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
-          message: result.message || "Token refreshed successfully",
+          message: result.message || "Làm mới token thành công",
           data: {
             access_token: result.access_token,
             refresh_token: result.refresh_token,
-           
           },
         });
       } catch (error) {
@@ -73,24 +73,18 @@ module.exports = {
   getCurrentLoginController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { access_token } = req.body;
-
-        const result = await UserService.getCurrentLoginService({ access_token });
+        // Lấy thông tin user từ req.user (do middleware auth thiết lập)
+        const result = await UserService.getCurrentLoginService(req.user);
 
         return res.status(result.status).json({
           status: result.status,
-          message: result.message || "User info retrieved successfully",
-          data: {
-            username: result.username,
-            full_name: result.full_name,
-            email: result.email,
-            // Include other user data as needed, excluding status and message
-          },
+          message: result.message,
+          data: result.data,
         });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({
-          ok: false,
+          status: 500,
           message: error.message || "Lỗi server khi lấy thông tin người dùng",
         });
       }

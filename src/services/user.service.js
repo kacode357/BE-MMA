@@ -121,7 +121,7 @@ module.exports = {
 
         // Tạo access token
         const access_token = jwt.sign(
-          { id: user._id, username: user.username, role: user.role },
+          { id: user._id, username: user.username, role: user.role, email: user.email },
           JWT_SECRET,
           { expiresIn: JWT_EXPIRES }
         );
@@ -185,7 +185,7 @@ module.exports = {
 
         // Tạo access token mới
         const new_access_token = jwt.sign(
-          { id: user._id, username: user.username, role: user.role },
+          { id: user._id, username: user.username, role: user.role, email: user.email },
           JWT_SECRET,
           { expiresIn: JWT_EXPIRES }
         );
@@ -213,33 +213,12 @@ module.exports = {
       }
     }),
 
-  getCurrentLoginService: ({ access_token }) =>
+  getCurrentLoginService: (user) =>
     new Promise(async (resolve, reject) => {
       try {
-        // Validate required fields
-        if (!access_token) {
-          return reject({
-            status: 400,
-            ok: false,
-            message: "Access token là bắt buộc",
-          });
-        }
-
-        // Xác minh access token
-        let decoded;
-        try {
-          decoded = jwt.verify(access_token, JWT_SECRET);
-        } catch (error) {
-          return reject({
-            status: 401,
-            ok: false,
-            message: "Access token không hợp lệ hoặc đã hết hạn",
-          });
-        }
-
-        // Tìm user theo id
-        const user = await UserModel.findById(decoded.id).select("-password");
-        if (!user) {
+        // Lấy thông tin user từ req.user (được middleware auth thiết lập)
+        const userData = await UserModel.findById(user._id).select("-password");
+        if (!userData) {
           return reject({
             status: 404,
             ok: false,
@@ -249,16 +228,15 @@ module.exports = {
 
         resolve({
           status: 200,
-          ok: true,
           message: "Lấy thông tin người dùng thành công",
           data: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            full_name: user.full_name,
-            role: user.role,
-            is_active: user.is_active,
-            created_at: user.created_at,
+            id: userData._id,
+            username: userData.username,
+            email: userData.email,
+            full_name: userData.full_name,
+            role: userData.role,
+            is_active: userData.is_active,
+            created_at: userData.created_at,
           },
         });
       } catch (error) {
