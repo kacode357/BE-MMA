@@ -13,7 +13,7 @@ module.exports = {
           email,
         });
 
-        return res.status(result.status).json(result);
+        return res.status(result.status).json({ data: result });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({ ok: false, message: error.message || "Lỗi server" });
@@ -27,7 +27,7 @@ module.exports = {
 
         const result = await UserService.loginUserService({ username, password });
 
-        return res.status(result.status).json(result);
+        return res.status(result.status).json({ data: result });
       } catch (error) {
         return res.status(500).json({
           ok: false,
@@ -43,7 +43,7 @@ module.exports = {
 
         const result = await UserService.resetTokenService({ access_token, refresh_token });
 
-        return res.status(result.status).json(result);
+        return res.status(result.status).json({ data: result });
       } catch (error) {
         return res.status(500).json({
           ok: false,
@@ -59,7 +59,7 @@ module.exports = {
 
         const result = await UserService.getCurrentLoginService({ access_token });
 
-        return res.status(result.status).json(result);
+        return res.status(result.status).json({ data: result });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({
