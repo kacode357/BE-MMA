@@ -17,7 +17,7 @@ module.exports = {
         return res.status(result.status).json({
           status: result.status,
           message: result.message,
-          data: result.data, // Dữ liệu nằm trong data
+          data: result.data,
         });
       } catch (error) {
         console.error(error.message);
@@ -42,13 +42,37 @@ module.exports = {
         return res.status(result.status).json({
           status: result.status,
           message: result.message,
-          data: result.data, // Dữ liệu nằm trong data
+          data: result.data,
         });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({
           status: 500,
           message: error.message || "Lỗi server khi kiểm tra quyền sử dụng gói",
+        });
+      }
+    }),
+
+  getAllPackagesController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { searchCondition, pageInfo } = req.body;
+
+        const result = await PackageService.getAllPackagesService({
+          searchCondition,
+          pageInfo,
+        });
+
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message,
+          data: result.data,
+        });
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          status: 500,
+          message: error.message || "Lỗi server khi tìm kiếm gói",
         });
       }
     }),
