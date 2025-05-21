@@ -16,7 +16,7 @@ app.use(express.json()); // for json
 app.use(express.urlencoded({ extended: true })); 
 
 //config template engine
-configViewEngine(app);
+//configViewEngine(app);
 
 const webAPI = express.Router();
 
