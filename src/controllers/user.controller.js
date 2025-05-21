@@ -34,7 +34,7 @@ module.exports = {
           status: result.status,
           message: result.message || "Login successful",
           data: {
-            token: result.token,
+            access_token: result.access_token,
             refresh_token: result.refresh_token,
           },
         });
