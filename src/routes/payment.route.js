@@ -1,16 +1,7 @@
 const express = require("express");
-const router = express.Router();
 const PaymentController = require("../controllers/payment.controller");
+const router = express.Router();
 
-// Tạo thanh toán mới
-router.post("/payment", PaymentController.createPayment);
-
-// Lấy thông tin thanh toán theo ID
-router.get("/payment/:id", PaymentController.getPayment);
-
-// Cập nhật trạng thái thanh toán
-router.put("/payment/:id", PaymentController.updatePaymentStatus);
-
-router.get("/dashboard/payment", PaymentController.getPaymentDashboard);
+router.post("/payments", PaymentController.createPaymentController);
 
 module.exports = router;

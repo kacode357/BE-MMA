@@ -1,116 +1,116 @@
-const Payment = require("../models/payment.model");
-const Order = require("../models/order.model");
+const PaymentModel = require("../models/payment.model");
+const PurchaseModel = require("../models/purchase.model");
+const UserModel = require("../models/user.model");
+const PackageModel = require("../models/package.model");
 
-const createPayment = async (data) => {
-  try {
-    // Kiểm tra đơn hàng có tồn tại không
-    const order = await Order.findById(data.order_id);
-    if (!order) {
-      throw new Error("Order does not exist.");
-    }
-
-    // Tạo thanh toán mới
-    const payment = new Payment(data);
-    await payment.save();
-    return payment;
-  } catch (error) {
-    throw new Error("Error creating payment: " + error.message);
-  }
-};
-
-const getPaymentById = async (id) => {
-  try {
-    const payment = await Payment.findById(id).populate("order_id");
-    return payment;
-  } catch (error) {
-    throw new Error("Error retrieving payment: " + error.message);
-  }
-};
-
-const updatePaymentStatus = async (id, status, method) => {
-  try {
-    // Cập nhật trạng thái và phương thức thanh toán của Payment
-    const updatedPayment = await Payment.findByIdAndUpdate(
-      id,
-      { 
-        status, 
-        method, 
-        paid_at: status === "paid" ? new Date() : null 
-      },
-      { new: true }
-    );
-
-    if (!updatedPayment) {
-      throw new Error("Payment not found.");
-    }
-
-    // Nếu trạng thái Payment là "paid", cập nhật Order tương ứng
-    if (status === "paid") {
-      const order = await Order.findById(updatedPayment.order_id);
-      if (order) {
-        order.status = "completed";
-        order.is_paid = true;
-        order.payment_method = method; // Cập nhật method vào Order
-        await order.save();
-      } else {
-        throw new Error("Associated order not found.");
-      }
-    }
-
-    return updatedPayment;
-  } catch (error) {
-    throw new Error("Error updating payment status: " + error.message);
-  }
-};
-
-const getPaymentDashboard = async () => {
-  try {
-    // Tổng số thanh toán đã được trả thành công (status = "paid")
-    const totalPaidPayments = await Payment.countDocuments({ status: "paid" });
-
-    // Tổng số tiền đã thanh toán thành công
-    const totalPaidAmount = await Payment.aggregate([
-      { $match: { status: "paid" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } }
-    ]);
-
-    // Thống kê phương thức thanh toán thành công (cash, qr_code)
-    const paymentMethodStats = await Payment.aggregate([
-      { $match: { status: "paid" } },
-      { $group: { _id: "$method", count: { $sum: 1 } } }
-    ]);
-
-    // Tổng số đơn hàng đã thanh toán thành công
-    const totalPaidOrders = await Order.countDocuments({ is_paid: true });
-
-    // Tổng doanh thu từ các đơn hàng đã thanh toán thành công
-    const totalRevenue = await Order.aggregate([
-      { $match: { is_paid: true } },
-      { $group: { _id: null, total: { $sum: "$total_price" } } }
-    ]);
-
-    // Danh sách đơn hàng gần đây đã thanh toán thành công
-    const recentPaidOrders = await Order.find({ is_paid: true })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate("created_by", "name") // Lấy thông tin nhân viên tạo đơn
-      .populate("items.food_id", "name price"); // Lấy thông tin món ăn trong đơn
-
-    return {
-      totalPaidPayments,
-      totalPaidAmount: totalPaidAmount.length > 0 ? totalPaidAmount[0].total : 0,
-      paymentMethodStats,
-      totalPaidOrders,
-      totalRevenue: totalRevenue.length > 0 ? totalRevenue[0].total : 0,
-      recentPaidOrders,
-    };
-  } catch (error) {
-    throw new Error("Error retrieving dashboard data: " + error.message);
-  }
-};
 module.exports = {
-  getPaymentDashboard,
-  createPayment,
-  getPaymentById,
-  updatePaymentStatus,
+  createPaymentService: (paymentData) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { user_id, purchase_id, amount, payment_method } = paymentData;
+
+        // Validate required fields
+        if (!user_id || !purchase_id || !amount || !payment_method) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id, purchase_id, amount và payment_method là bắt buộc",
+          });
+        }
+
+        // Kiểm tra user tồn tại
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        // Kiểm tra purchase tồn tại và hợp lệ
+        const purchase = await PurchaseModel.findById(purchase_id);
+        if (!purchase) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Giao dịch mua không tồn tại",
+          });
+        }
+        if (purchase.user_id.toString() !== user_id) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không phải người tạo giao dịch mua",
+          });
+        }
+        if (purchase.status !== "pending") {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Giao dịch mua không ở trạng thái chờ thanh toán",
+          });
+        }
+
+        // Kiểm tra package và amount
+        const package = await PackageModel.findById(purchase.package_id);
+        if (!package) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+        if (package.price !== amount) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Số tiền không khớp với giá gói",
+          });
+        }
+
+        // Tạo bản ghi thanh toán
+        const payment = await PaymentModel.create({
+          purchase_id,
+          amount,
+          payment_method,
+          payment_status: "pending",
+        });
+
+        // Giả lập thanh toán
+        const paymentSuccess = true; // Thay bằng logic gọi cổng thanh toán
+        if (paymentSuccess) {
+          payment.payment_status = "success";
+          purchase.status = "completed";
+
+          // Cập nhật role = premium nếu là gói Premium
+          if (package.package_name.toLowerCase() === "premium") {
+            user.role = "premium";
+            await user.save();
+          }
+        } else {
+          payment.payment_status = "failed";
+          purchase.status = "failed";
+        }
+        await payment.save();
+        await purchase.save();
+
+        resolve({
+          status: 201,
+          ok: true,
+          message: "Tạo thanh toán thành công",
+          data: {
+            payment_id: payment._id,
+            purchase_id: payment.purchase_id,
+            payment_status: payment.payment_status,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi tạo thanh toán: " + error.message,
+        });
+      }
+    }),
 };

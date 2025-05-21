@@ -1,17 +1,19 @@
-
-const CategoryRoute = require("./category.route");
-const FoodRoute = require("./food.route");
-const Oder = require("./order.route");
 const CheckApi = require("./checkup.route");
-const Payment = require("./payment.route");
+const UserRoute = require("./user.route");
+const PackageRoute = require("./package.route");
+const PurchaseRoute = require("./purchase.route");
+const PaymentRoute = require("./payment.route");
+const GroupRoute = require("./group.route");
+const GroupMemberRoute = require("./groupMember.route");
 
 const initRoute = (app) => {
   app.use("", CheckApi);
-  app.use("/v1/api", CategoryRoute);
-  app.use("/v1/api", FoodRoute);
-  app.use("/v1/api", Oder);
-  app.use("/v1/api", Payment);
-
+  app.use("/v1/api", UserRoute);
+  app.use("/v1/api", PackageRoute);
+  app.use("/v1/api", PurchaseRoute);
+  app.use("/v1/api", PaymentRoute);
+  app.use("/v1/api", GroupRoute);
+  app.use("/v1/api", GroupMemberRoute);
 };
 
 module.exports = initRoute;

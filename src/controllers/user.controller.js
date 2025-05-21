@@ -1,54 +1,71 @@
 const UserService = require("../services/user.service");
 
 module.exports = {
-  createUserController: async (req, res) => {
-    try {
-      const { username, password, role, full_name, phone, is_active, email } = req.body;
+  createUserController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { username, password, full_name, email } = req.body;
 
-      if (!username || !password || !full_name) {
-        return res.status(400).json({ message: "Tên người dùng, mật khẩu và họ tên là bắt buộc" });
+        const result = await UserService.createUserService({
+          username,
+          password,
+          full_name,
+          email,
+        });
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({ ok: false, message: error.message || "Lỗi server" });
       }
+    }),
 
-      const result = await UserService.createUserService({
-        username,
-        password,
-        role,
-        full_name,
-        phone,
-        is_active,
-        email,
-      });
+  loginUserController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { username, password } = req.body;
 
-      return res.status(201).json(result);
-    } catch (error) {
-      console.error(error.message);
-      if (error.code === 11000) {
-        return res.status(400).json({ ok: false, message: "Dữ liệu trùng lặp, kiểm tra lại username hoặc email" });
-      }
-      return res.status(500).json({ ok: false, message: "Lỗi server" });
-    }
-  },
-  loginUserController: async (req, res) => {
-    try {
-      const { username, password } = req.body;
+        const result = await UserService.loginUserService({ username, password });
 
-      // Kiểm tra dữ liệu đầu vào
-      if (!username || !password) {
-        return res.status(400).json({
+        return res.status(result.status).json(result);
+      } catch (error) {
+        return res.status(500).json({
           ok: false,
-          message: "Tên người dùng và mật khẩu là bắt buộc",
+          message: error.message || "Lỗi server khi đăng nhập",
         });
       }
+    }),
 
-      // Gọi service để xử lý logic
-      const result = await UserService.loginUserService({ username, password });
+  resetTokenController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { access_token, refresh_token } = req.body;
 
-      return res.status(result.status).json(result);
-    } catch (error) {
-      return res.status(error.status || 500).json({
-        ok: false,
-        message: error.message || "Lỗi server khi đăng nhập",
-      });
-    }
-  },
+        const result = await UserService.resetTokenService({ access_token, refresh_token });
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi làm mới token",
+        });
+      }
+    }),
+
+  getCurrentLoginController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { access_token } = req.body;
+
+        const result = await UserService.getCurrentLoginService({ access_token });
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi lấy thông tin người dùng",
+        });
+      }
+    }),
 };
