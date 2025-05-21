@@ -13,7 +13,10 @@ module.exports = {
           email,
         });
 
-        return res.status(result.status).json({ data: result });
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message || "User created successfully",
+        });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({ ok: false, message: error.message || "Lỗi server" });
@@ -27,7 +30,14 @@ module.exports = {
 
         const result = await UserService.loginUserService({ username, password });
 
-        return res.status(result.status).json({ data: result });
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message || "Login successful",
+          data: {
+            token: result.token,
+            refresh_token: result.refresh_token,
+          },
+        });
       } catch (error) {
         return res.status(500).json({
           ok: false,
@@ -43,7 +53,15 @@ module.exports = {
 
         const result = await UserService.resetTokenService({ access_token, refresh_token });
 
-        return res.status(result.status).json({ data: result });
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message || "Token refreshed successfully",
+          data: {
+            access_token: result.access_token,
+            refresh_token: result.refresh_token,
+           
+          },
+        });
       } catch (error) {
         return res.status(500).json({
           ok: false,
@@ -59,7 +77,16 @@ module.exports = {
 
         const result = await UserService.getCurrentLoginService({ access_token });
 
-        return res.status(result.status).json({ data: result });
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message || "User info retrieved successfully",
+          data: {
+            username: result.username,
+            full_name: result.full_name,
+            email: result.email,
+            // Include other user data as needed, excluding status and message
+          },
+        });
       } catch (error) {
         console.error(error.message);
         return res.status(500).json({
