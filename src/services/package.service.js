@@ -282,4 +282,45 @@ module.exports = {
         });
       }
     }),
+    getPackageByIdService: ({ package_id }) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      if (!package_id) {
+        return reject({
+          status: 400,
+          ok: false,
+          message: "package_id là bắt buộc",
+        });
+      }
+
+      const packageData = await PackageModel.findById(package_id);
+      if (!packageData) {
+        return reject({
+          status: 404,
+          ok: false,
+          message: "Gói không tồn tại",
+        });
+      }
+
+      resolve({
+        status: 200,
+        message: "Lấy thông tin gói thành công",
+        data: {
+          package_id: packageData._id,
+          package_name: packageData.package_name,
+          description: packageData.description,
+          price: packageData.price,
+          img_url: packageData.img_url,
+          created_at: packageData.created_at,
+          is_delete: packageData.is_delete,
+        },
+      });
+    } catch (error) {
+      reject({
+        status: 500,
+        ok: false,
+        message: "Lỗi khi lấy thông tin gói: " + error.message,
+      });
+    }
+  }),
 };

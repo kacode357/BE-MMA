@@ -76,4 +76,24 @@ module.exports = {
         });
       }
     }),
+    getPackageByIdController: (req, res) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      const { id: package_id } = req.params;
+
+      const result = await PackageService.getPackageByIdService({ package_id });
+
+      return res.status(result.status).json({
+        status: result.status,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({
+        status: 500,
+        message: error.message || "Lỗi server khi lấy thông tin gói",
+      });
+    }
+  }),
 };

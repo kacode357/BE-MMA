@@ -4,6 +4,6 @@ const router = express.Router();
 
 router.post("/packages", PackageController.createPackageController);
 router.get("/packages/:id/access", PackageController.checkPackageAccessController);
-router.post("/packages/search", PackageController.getAllPackagesController); // Thêm route mới
-
+router.post("/packages/search", PackageController.getAllPackagesController); 
+router.get("/packages/:id", PackageController.getPackageByIdController);
 module.exports = router;
