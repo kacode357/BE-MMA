@@ -77,32 +77,18 @@ module.exports = {
           payment_status: "pending",
         });
 
-        // Giả lập thanh toán
-        const paymentSuccess = true; // Thay bằng logic gọi cổng thanh toán
-        if (paymentSuccess) {
-          payment.payment_status = "success";
-          purchase.status = "completed";
-
-          // Cập nhật role = premium nếu là gói Premium
-          if (package.package_name.toLowerCase() === "premium") {
-            user.role = "premium";
-            await user.save();
-          }
-        } else {
-          payment.payment_status = "failed";
-          purchase.status = "failed";
-        }
-        await payment.save();
-        await purchase.save();
+        // Tạo mã QR thanh toán với SePay
+        const qrCodeUrl = await createSepayQRCode(payment, package.price);
 
         resolve({
           status: 201,
           ok: true,
-          message: "Tạo thanh toán thành công",
+          message: "Tạo thanh toán thành công, vui lòng quét mã QR để thanh toán",
           data: {
             payment_id: payment._id,
             purchase_id: payment.purchase_id,
             payment_status: payment.payment_status,
+            qr_code_url: qrCodeUrl,
           },
         });
       } catch (error) {
@@ -110,6 +96,120 @@ module.exports = {
           status: 500,
           ok: false,
           message: "Lỗi khi tạo thanh toán: " + error.message,
+        });
+      }
+    }),
+
+  // Tạo mã QR thanh toán với SePay
+  createSepayQRCode: async (payment, amount) => {
+    try {
+      const response = await axios.post(
+        'https://my.sepay.vn/api/v1/qr/create',
+        {
+          amount: amount,
+          description: `Thanh toán đơn hàng #${payment.purchase_id}`,
+          reference_code: payment._id.toString(), // Mã tham chiếu để đối chiếu giao dịch
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer fOseMdBQoHrcwUd`,
+          },
+        }
+      );
+
+      console.log('SePay QR Code response:', response.data);
+
+      if (response.status === 200 && response.data.qr_code_url) {
+        return response.data.qr_code_url;
+      } else {
+        throw new Error('Không thể tạo mã QR từ SePay.');
+      }
+    } catch (error) {
+      console.error('SePay QR Code error:', error.message);
+      throw new Error('Lỗi khi tạo mã QR: ' + error.message);
+    }
+  },
+
+  // Xử lý Webhook từ SePay
+  processSepayWebhook: (data) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { gateway, transactionDate, transferAmount, referenceCode, transferType } = data;
+
+        // Chỉ xử lý giao dịch "in" (tiền vào)
+        if (transferType !== 'in') {
+          return resolve({
+            status: 200,
+            ok: true,
+            message: 'Không xử lý giao dịch tiền ra',
+          });
+        }
+
+        // Tìm bản ghi thanh toán dựa trên referenceCode (payment_id)
+        const payment = await PaymentModel.findById(referenceCode);
+        if (!payment) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: 'Thanh toán không tồn tại',
+          });
+        }
+
+        // Kiểm tra số tiền
+        if (transferAmount !== payment.amount) {
+          payment.payment_status = 'failed';
+          await payment.save();
+
+          const purchase = await PurchaseModel.findById(payment.purchase_id);
+          if (purchase) {
+            purchase.status = 'failed';
+            await purchase.save();
+          }
+
+          return reject({
+            status: 400,
+            ok: false,
+            message: 'Số tiền không khớp với thanh toán',
+          });
+        }
+
+        // Cập nhật trạng thái thanh toán và đơn hàng
+        payment.payment_status = 'success';
+        await payment.save();
+
+        const purchase = await PurchaseModel.findById(payment.purchase_id);
+        if (!purchase) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: 'Giao dịch mua không tồn tại',
+          });
+        }
+
+        purchase.status = 'completed';
+        await purchase.save();
+
+        // Cập nhật role = premium nếu là gói Premium
+        const package = await PackageModel.findById(purchase.package_id);
+        if (package && package.package_name.toLowerCase() === 'premium') {
+          const user = await UserModel.findById(purchase.user_id);
+          if (user) {
+            user.role = 'premium';
+            await user.save();
+          }
+        }
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: 'Thanh toán đã được xác nhận thành công',
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: 'Lỗi khi xử lý Webhook: ' + error.message,
         });
       }
     }),
