@@ -113,7 +113,7 @@ const PaymentService = {
   generateSepayQRCodeUrl: (payment, amount) => {
     try {
       const accountNumber = process.env.SEPAY_ACCOUNT_NUMBER || "16697391"; // Số tài khoản ngân hàng
-      const bankName = process.env.SEPAY_BANK_NAME || "Ngân hàng TMCP Á Châu"; // Tên ngân hàng
+      const bankName = process.env.SEPAY_BANK_NAME || "ACB"; // Tên ngân hàng
       const description = encodeURIComponent(`Thanh toán đơn hàng #${payment.purchase_id}`);
 
       // Tạo URL QR theo cấu trúc của SePay
