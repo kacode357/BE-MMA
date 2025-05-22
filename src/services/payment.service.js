@@ -123,7 +123,7 @@ const PaymentService = {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer fOseMdBQoHrcwUd`, // Thay Bearer token bằng key của bạn
+            'Authorization': `Bearer 	7RIT2UZLK1JA5LTNHVGXNMQUKDJSQ0KLFVW8TD0G2HBC9AUFRHDODHXXYQTRISIJ`, // Thay Bearer token bằng key của bạn
           },
         }
       );
