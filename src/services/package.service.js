@@ -282,7 +282,145 @@ module.exports = {
         });
       }
     }),
-    getPackageByIdService: ({ package_id }) =>
+  getPackageByIdService: ({ package_id }) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        if (!package_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "package_id là bắt buộc",
+          });
+        }
+
+        const packageData = await PackageModel.findById(package_id);
+        if (!packageData) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+
+        resolve({
+          status: 200,
+          message: "Lấy thông tin gói thành công",
+          data: {
+            package_id: packageData._id,
+            package_name: packageData.package_name,
+            description: packageData.description,
+            price: packageData.price,
+            img_url: packageData.img_url,
+            created_at: packageData.created_at,
+            is_delete: packageData.is_delete,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi lấy thông tin gói: " + error.message,
+        });
+      }
+    }),
+  updatePackageService: ({ package_id, package_name, description, price, img_url, user_id }) =>
+    new Promise(async (resolve, reject) => {
+      try {
+
+        if (!package_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "package_id là bắt buộc",
+          });
+        }
+
+        if (!user_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id là bắt buộc",
+          });
+        }
+
+        const user = await UserModel.findById(user_id);
+        if (!user || user.role !== "admin") {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Chỉ admin mới có thể cập nhật gói",
+          });
+        }
+
+        const packageData = await PackageModel.findById(package_id);
+        if (!packageData) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+        if (package_name) {
+          const existingPackage = await PackageModel.findOne({
+            package_name,
+            is_delete: false,
+            _id: { $ne: package_id }, // Loại trừ gói đang được cập nhật
+          });
+          if (existingPackage) {
+            return reject({
+              status: 409,
+              ok: false,
+              message: "Tên gói đã tồn tại",
+            });
+          }
+        }
+        if (packageData.is_delete) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Gói đã bị xóa, không thể cập nhật",
+          });
+        }
+
+        // Cập nhật các trường nếu được cung cấp
+        if (package_name) packageData.package_name = package_name;
+        if (description !== undefined) packageData.description = description;
+        if (price !== undefined) {
+          if (price < 0) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "Giá phải lớn hơn hoặc bằng 0",
+            });
+          }
+          packageData.price = price;
+        }
+        if (img_url) packageData.img_url = img_url;
+
+        await packageData.save();
+
+        resolve({
+          status: 200,
+          message: "Cập nhật gói thành công",
+          data: {
+            package_id: packageData._id,
+            package_name: packageData.package_name,
+            description: packageData.description,
+            price: packageData.price,
+            img_url: packageData.img_url,
+            created_at: packageData.created_at,
+            is_delete: packageData.is_delete,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi cập nhật gói: " + error.message,
+        });
+      }
+    }),
+    softDeletePackageService: ({ package_id, user_id }) =>
   new Promise(async (resolve, reject) => {
     try {
       if (!package_id) {
@@ -290,6 +428,23 @@ module.exports = {
           status: 400,
           ok: false,
           message: "package_id là bắt buộc",
+        });
+      }
+
+      if (!user_id) {
+        return reject({
+          status: 400,
+          ok: false,
+          message: "user_id là bắt buộc",
+        });
+      }
+
+      const user = await UserModel.findById(user_id);
+      if (!user || user.role !== "admin") {
+        return reject({
+          status: 403,
+          ok: false,
+          message: "Chỉ admin mới có thể xóa gói",
         });
       }
 
@@ -302,9 +457,21 @@ module.exports = {
         });
       }
 
+      if (packageData.is_delete) {
+        return reject({
+          status: 400,
+          ok: false,
+          message: "Gói đã bị xóa trước đó",
+        });
+      }
+
+      // Cập nhật is_delete thành true
+      packageData.is_delete = true;
+      await packageData.save();
+
       resolve({
         status: 200,
-        message: "Lấy thông tin gói thành công",
+        message: "Xóa gói thành công",
         data: {
           package_id: packageData._id,
           package_name: packageData.package_name,
@@ -319,7 +486,7 @@ module.exports = {
       reject({
         status: 500,
         ok: false,
-        message: "Lỗi khi lấy thông tin gói: " + error.message,
+        message: "Lỗi khi xóa mềm gói: " + error.message,
       });
     }
   }),

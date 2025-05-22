@@ -6,4 +6,6 @@ router.post("/packages", PackageController.createPackageController);
 router.get("/packages/:id/access", PackageController.checkPackageAccessController);
 router.post("/packages/search", PackageController.getAllPackagesController); 
 router.get("/packages/:id", PackageController.getPackageByIdController);
+router.put("/packages/:id", PackageController.updatePackageController);
+router.delete("/packages/:id", PackageController.softDeletePackageController);
 module.exports = router;

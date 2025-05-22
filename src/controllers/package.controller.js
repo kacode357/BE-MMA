@@ -96,4 +96,56 @@ module.exports = {
       });
     }
   }),
+  updatePackageController: (req, res) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      const { id: package_id } = req.params;
+      const { package_name, description, price, img_url, user_id } = req.body;
+
+      const result = await PackageService.updatePackageService({
+        package_id,
+        package_name,
+        description,
+        price,
+        img_url,
+        user_id,
+      });
+
+      return res.status(result.status).json({
+        status: result.status,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({
+        status: 500,
+        message: error.message || "Lỗi server khi cập nhật gói",
+      });
+    }
+  }),
+  softDeletePackageController: (req, res) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      const { id: package_id } = req.params;
+      const { user_id } = req.body;
+
+      const result = await PackageService.softDeletePackageService({
+        package_id,
+        user_id,
+      });
+
+      return res.status(result.status).json({
+        status: result.status,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({
+        status: 500,
+        message: error.message || "Lỗi server khi xóa mềm gói",
+      });
+    }
+  }),
 };
