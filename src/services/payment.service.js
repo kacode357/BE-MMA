@@ -84,7 +84,7 @@ const PaymentService = {
           amount,
           payment_method,
           payment_status: "pending",
-          referenceCode: `PAY_${purchase_id}_${Date.now()}`, // Tạo referenceCode tùy chỉnh
+          referenceCode: `PAY${Date.now()}`, // Tạo referenceCode đơn giản hơn
         });
 
         // Tạo URL QR Code động theo tài liệu SePay
@@ -99,7 +99,7 @@ const PaymentService = {
             purchase_id: payment.purchase_id,
             payment_status: payment.payment_status,
             qr_code_url: qrCodeUrl,
-            reference_code: payment.referenceCode, // Trả về referenceCode để client lưu
+            reference_code: payment.referenceCode,
           },
         });
       } catch (error) {
@@ -134,7 +134,7 @@ const PaymentService = {
   processSepayWebhook: (data) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { id, gateway, transactionDate, transferAmount, referenceCode, transferType } = data;
+        const { id, gateway, transactionDate, transferAmount, referenceCode, transferType, content } = data;
 
         // Chỉ xử lý giao dịch "in" (tiền vào)
         if (transferType !== 'in') {
@@ -157,13 +157,19 @@ const PaymentService = {
           });
         }
 
-        // Tìm bản ghi thanh toán dựa trên referenceCode (lấy từ nội dung chuyển khoản)
-        const payment = await PaymentModel.findOne({ referenceCode });
+        // Tìm referenceCode từ nội dung chuyển khoản (content)
+        const contentMatch = content.match(/PAY\d+/);
+        const extractedReferenceCode = contentMatch ? contentMatch[0] : referenceCode;
+
+        console.log('Extracted referenceCode from content:', extractedReferenceCode);
+
+        // Tìm bản ghi thanh toán dựa trên referenceCode
+        const payment = await PaymentModel.findOne({ referenceCode: extractedReferenceCode });
         if (!payment) {
           return reject({
             status: 404,
             ok: false,
-            message: 'Thanh toán không tồn tại với referenceCode: ' + referenceCode,
+            message: 'Thanh toán không tồn tại với referenceCode: ' + extractedReferenceCode,
           });
         }
 
