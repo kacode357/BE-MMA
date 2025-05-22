@@ -132,7 +132,7 @@ const PaymentService = {
   processSepayWebhook: (data) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { gateway, transactionDate, transferAmount, referenceCode, transferType } = data;
+        const { id, gateway, transactionDate, transferAmount, referenceCode, transferType } = data;
 
         // Chỉ xử lý giao dịch "in" (tiền vào)
         if (transferType !== 'in') {
@@ -140,6 +140,19 @@ const PaymentService = {
             status: 200,
             ok: true,
             message: 'Không xử lý giao dịch tiền ra',
+          });
+        }
+
+        // Kiểm tra chống trùng lặp giao dịch
+        const existingPayment = await PaymentModel.findOne({
+          _id: referenceCode,
+          'sepayTransactionId': id,
+        });
+        if (existingPayment) {
+          return resolve({
+            status: 200,
+            ok: true,
+            message: 'Giao dịch đã được xử lý trước đó',
           });
         }
 
@@ -173,6 +186,7 @@ const PaymentService = {
 
         // Cập nhật trạng thái thanh toán và đơn hàng
         payment.payment_status = 'success';
+        payment.sepayTransactionId = id; // Lưu id giao dịch từ SePay để chống trùng lặp
         await payment.save();
 
         const purchase = await PurchaseModel.findById(payment.purchase_id);

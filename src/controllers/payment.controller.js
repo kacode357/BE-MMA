@@ -27,8 +27,13 @@ module.exports = {
   handleSepayWebhook: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
+        // Lấy IP thực tế từ header x-forwarded-for
+        const forwardedIps = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const clientIp = forwardedIps ? forwardedIps.split(',')[0].trim() : req.connection.remoteAddress;
+
+        console.log('Webhook client IP:', clientIp);
+
         // Kiểm tra IP của SePay
-        const clientIp = req.ip || req.connection.remoteAddress;
         if (clientIp !== '103.255.238.9') {
           return res.status(403).json({
             success: false,
@@ -38,7 +43,7 @@ module.exports = {
 
         // Kiểm tra API Key trong header
         const authHeader = req.headers['authorization'];
-        const expectedApiKey = '7RIT2UZLK1JA5LTNHVGXNMQUKDJSQ0KLFVW8TD0G2HBC9AUFRHDODHXXYQTRISIJ'; // Lưu API Key trong biến môi trường
+        const expectedApiKey = process.env.SEPAY_API_KEY; // Lấy từ biến môi trường
         if (!authHeader || authHeader !== `Apikey ${expectedApiKey}`) {
           return res.status(401).json({
             success: false,
@@ -48,7 +53,9 @@ module.exports = {
 
         // Lấy dữ liệu từ Webhook
         const data = req.body;
-        if (!data || !data.transactionDate || !data.transferAmount || !data.referenceCode) {
+        console.log('Webhook data:', data);
+
+        if (!data || !data.id || !data.transactionDate || !data.transferAmount || !data.referenceCode) {
           return res.status(400).json({
             success: false,
             message: 'Dữ liệu Webhook không hợp lệ',

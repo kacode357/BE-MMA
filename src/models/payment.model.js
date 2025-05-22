@@ -14,7 +14,7 @@ const paymentSchema = new mongoose.Schema({
   payment_method: {
     type: String,
     required: true,
-    enum: ["cash", "qr_code", "bank_transfer"],
+    enum: ["credit_card", "paypal", "bank_transfer", "qr_code"],
   },
   payment_status: {
     type: String,
@@ -25,6 +25,10 @@ const paymentSchema = new mongoose.Schema({
   payment_date: {
     type: Date,
     default: Date.now,
+  },
+  sepayTransactionId: {
+    type: String,
+    required: false, // Lưu id giao dịch từ SePay để chống trùng lặp
   },
 });
 
