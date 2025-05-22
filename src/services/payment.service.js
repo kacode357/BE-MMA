@@ -2,8 +2,9 @@ const PaymentModel = require("../models/payment.model");
 const PurchaseModel = require("../models/purchase.model");
 const UserModel = require("../models/user.model");
 const PackageModel = require("../models/package.model");
+const axios = require("axios");
 
-module.exports = {
+const PaymentService = {
   createPaymentService: (paymentData) =>
     new Promise(async (resolve, reject) => {
       try {
@@ -15,6 +16,15 @@ module.exports = {
             status: 400,
             ok: false,
             message: "user_id, purchase_id, amount và payment_method là bắt buộc",
+          });
+        }
+
+        // Kiểm tra payment_method
+        if (payment_method !== "qr_code") {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Phương thức thanh toán phải là 'qr_code'",
           });
         }
 
@@ -78,7 +88,7 @@ module.exports = {
         });
 
         // Tạo mã QR thanh toán với SePay
-        const qrCodeUrl = await createSepayQRCode(payment, package.price);
+        const qrCodeUrl = await PaymentService.createSepayQRCode(payment, package.price);
 
         resolve({
           status: 201,
@@ -113,7 +123,7 @@ module.exports = {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer fOseMdBQoHrcwUd`,
+            'Authorization': `Bearer fOseMdBQoHrcwUd`, // Thay Bearer token bằng key của bạn
           },
         }
       );
@@ -214,3 +224,5 @@ module.exports = {
       }
     }),
 };
+
+module.exports = PaymentService;
