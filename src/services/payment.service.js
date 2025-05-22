@@ -84,6 +84,7 @@ const PaymentService = {
           amount,
           payment_method,
           payment_status: "pending",
+          referenceCode: `PAY_${purchase_id}_${Date.now()}`, // Tạo referenceCode tùy chỉnh
         });
 
         // Tạo URL QR Code động theo tài liệu SePay
@@ -98,6 +99,7 @@ const PaymentService = {
             purchase_id: payment.purchase_id,
             payment_status: payment.payment_status,
             qr_code_url: qrCodeUrl,
+            reference_code: payment.referenceCode, // Trả về referenceCode để client lưu
           },
         });
       } catch (error) {
@@ -114,7 +116,7 @@ const PaymentService = {
     try {
       const accountNumber = process.env.SEPAY_ACCOUNT_NUMBER || "16697391"; // Số tài khoản ngân hàng
       const bankName = process.env.SEPAY_BANK_NAME || "ACB"; // Tên ngân hàng
-      const description = encodeURIComponent(`Thanh toán đơn hàng #${payment.purchase_id}`);
+      const description = encodeURIComponent(`Thanh toán ${payment.referenceCode}`);
 
       // Tạo URL QR theo cấu trúc của SePay
       const qrCodeUrl = `https://qr.sepay.vn/img?acc=${accountNumber}&bank=${bankName}&amount=${amount}&des=${description}`;
@@ -145,8 +147,7 @@ const PaymentService = {
 
         // Kiểm tra chống trùng lặp giao dịch
         const existingPayment = await PaymentModel.findOne({
-          _id: referenceCode,
-          'sepayTransactionId': id,
+          sepayTransactionId: id,
         });
         if (existingPayment) {
           return resolve({
@@ -156,13 +157,13 @@ const PaymentService = {
           });
         }
 
-        // Tìm bản ghi thanh toán dựa trên referenceCode (payment_id)
-        const payment = await PaymentModel.findById(referenceCode);
+        // Tìm bản ghi thanh toán dựa trên referenceCode (lấy từ nội dung chuyển khoản)
+        const payment = await PaymentModel.findOne({ referenceCode });
         if (!payment) {
           return reject({
             status: 404,
             ok: false,
-            message: 'Thanh toán không tồn tại',
+            message: 'Thanh toán không tồn tại với referenceCode: ' + referenceCode,
           });
         }
 

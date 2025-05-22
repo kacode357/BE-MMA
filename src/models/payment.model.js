@@ -30,6 +30,11 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     required: false, // Lưu id giao dịch từ SePay để chống trùng lặp
   },
+  referenceCode: {
+    type: String,
+    required: false, // Lưu mã tham chiếu tùy chỉnh để đối chiếu với SePay
+    index: true, // Tạo index để tìm kiếm nhanh
+  },
 });
 
 module.exports = mongoose.model("Payment", paymentSchema);
