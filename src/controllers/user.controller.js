@@ -89,4 +89,49 @@ module.exports = {
         });
       }
     }),
+  updateUserController: (req, res) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      const userId = req.user._id; 
+      console.log(userId);
+      const { full_name, email, avatar_url } = req.body; // Loại bỏ password
+
+      const result = await UserService.updateUserService(userId, {
+        full_name,
+        email,
+        avatar_url,
+      });
+
+      return res.status(result.status).json({
+        status: result.status,
+        message: result.message || "Cập nhật thông tin người dùng thành công",
+      });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({
+        status: 500,
+        message: error.message || "Lỗi server khi cập nhật thông tin người dùng",
+      });
+    }
+  }),
+  changePasswordController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const userId = req.user._id;
+        const { currentPassword, newPassword } = req.body;
+
+        const result = await UserService.changePasswordService(userId, currentPassword, newPassword);
+
+        return res.status(result.status).json({
+          status: result.status,
+          message: result.message || "Đổi mật khẩu thành công",
+        });
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          status: 500,
+          message: error.message || "Lỗi server khi đổi mật khẩu",
+        });
+      }
+    }),
 };

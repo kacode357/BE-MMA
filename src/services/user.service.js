@@ -238,7 +238,7 @@ module.exports = {
             role: userData.role,
             is_active: userData.is_active,
             created_at: userData.created_at,
-            avatar_url: userData.avatar_url, // Thêm field avatar_url vào dữ liệu trả về
+            avatar_url: userData.avatar_url,
           },
         });
       } catch (error) {
@@ -246,6 +246,141 @@ module.exports = {
           status: 500,
           ok: false,
           message: "Lỗi khi lấy thông tin người dùng: " + error.message,
+        });
+      }
+    }),
+
+ updateUserService: (userId, updates) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      const { full_name, email, avatar_url } = updates; // Loại bỏ password
+
+      // Kiểm tra user tồn tại
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return reject({
+          status: 404,
+          ok: false,
+          message: "Người dùng không tồn tại",
+        });
+      }
+
+      // Kiểm tra định dạng email nếu được cung cấp
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Email không hợp lệ",
+          });
+        }
+
+        // Kiểm tra trùng email với người dùng khác
+        const existingEmail = await UserModel.findOne({ email, _id: { $ne: userId } });
+        if (existingEmail) {
+          return reject({
+            status: 409,
+            ok: false,
+            message: "Email đã tồn tại",
+          });
+        }
+        user.email = email;
+      }
+
+      // Cập nhật full_name nếu được cung cấp
+      if (full_name) {
+        // Kiểm tra trùng full_name với người dùng khác
+        const existingFullName = await UserModel.findOne({ full_name, _id: { $ne: userId } });
+        if (existingFullName) {
+          return reject({
+            status: 409,
+            ok: false,
+            message: "Họ tên đã được sử dụng",
+          });
+        }
+        user.full_name = full_name;
+      }
+
+      // Cập nhật avatar_url nếu được cung cấp
+      if (avatar_url) {
+        user.avatar_url = avatar_url;
+      }
+
+      // Lưu thay đổi vào database
+      await user.save();
+
+      resolve({
+        status: 200,
+        ok: true,
+        message: "Cập nhật thông tin người dùng thành công",
+      });
+    } catch (error) {
+      reject({
+        status: 500,
+        ok: false,
+        message: "Lỗi khi cập nhật thông tin người dùng: " + error.message,
+      });
+    }
+  }),
+  changePasswordService: (userId, currentPassword, newPassword) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        // Validate required fields
+        if (!currentPassword || !newPassword) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Mật khẩu hiện tại và mật khẩu mới là bắt buộc",
+          });
+        }
+
+        // Kiểm tra user tồn tại
+        const user = await UserModel.findById(userId);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        // Kiểm tra mật khẩu hiện tại
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          return reject({
+            status: 401,
+            ok: false,
+            message: "Mật khẩu hiện tại không đúng",
+          });
+        }
+
+        // Kiểm tra mật khẩu mới
+        if (newPassword.length < 6) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+          });
+        }
+
+        // Mã hóa mật khẩu mới
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+
+        // Lưu thay đổi vào database
+        await user.save();
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Đổi mật khẩu thành công",
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi đổi mật khẩu: " + error.message,
         });
       }
     }),
