@@ -71,6 +71,7 @@ module.exports = {
           password: hashedPassword,
           full_name,
           email,
+          // avatar_url không cần truyền vào, sẽ tự động rỗng (default: "")
         });
 
         resolve({
@@ -237,6 +238,7 @@ module.exports = {
             role: userData.role,
             is_active: userData.is_active,
             created_at: userData.created_at,
+            avatar_url: userData.avatar_url, // Thêm field avatar_url vào dữ liệu trả về
           },
         });
       } catch (error) {
