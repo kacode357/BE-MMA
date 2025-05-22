@@ -2,7 +2,6 @@ const PaymentModel = require("../models/payment.model");
 const PurchaseModel = require("../models/purchase.model");
 const UserModel = require("../models/user.model");
 const PackageModel = require("../models/package.model");
-const axios = require("axios");
 
 const PaymentService = {
   createPaymentService: (paymentData) =>
@@ -87,8 +86,8 @@ const PaymentService = {
           payment_status: "pending",
         });
 
-        // Tạo mã QR thanh toán với SePay
-        const qrCodeUrl = await PaymentService.createSepayQRCode(payment, package.price);
+        // Tạo URL QR Code động theo tài liệu SePay
+        const qrCodeUrl = PaymentService.generateSepayQRCodeUrl(payment, package.price);
 
         resolve({
           status: 201,
@@ -110,34 +109,22 @@ const PaymentService = {
       }
     }),
 
-  // Tạo mã QR thanh toán với SePay
-  createSepayQRCode: async (payment, amount) => {
+  // Tạo URL QR Code động theo tài liệu SePay
+  generateSepayQRCodeUrl: (payment, amount) => {
     try {
-      const response = await axios.post(
-        'https://my.sepay.vn/api/v1/qr/create',
-        {
-          amount: amount,
-          description: `Thanh toán đơn hàng #${payment.purchase_id}`,
-          reference_code: payment._id.toString(), // Mã tham chiếu để đối chiếu giao dịch
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer 7RIT2UZLK1JA5LTNHVGXNMQUKDJSQ0KLFVW8TD0G2HBC9AUFRHDODHXXYQTRISIJ`, // Thay Bearer token bằng key của bạn
-          },
-        }
-      );
+      const accountNumber = process.env.SEPAY_ACCOUNT_NUMBER || "16697391"; // Số tài khoản ngân hàng
+      const bankName = process.env.SEPAY_BANK_NAME || "Ngân hàng TMCP Á Châu"; // Tên ngân hàng
+      const description = encodeURIComponent(`Thanh toán đơn hàng #${payment.purchase_id}`);
 
-      console.log('SePay QR Code response:', response.data);
+      // Tạo URL QR theo cấu trúc của SePay
+      const qrCodeUrl = `https://qr.sepay.vn/img?acc=${accountNumber}&bank=${bankName}&amount=${amount}&des=${description}`;
 
-      if (response.status === 200 && response.data.qr_code_url) {
-        return response.data.qr_code_url;
-      } else {
-        throw new Error('Không thể tạo mã QR từ SePay.');
-      }
+      console.log('Generated SePay QR Code URL:', qrCodeUrl);
+
+      return qrCodeUrl;
     } catch (error) {
-      console.error('SePay QR Code error:', error.message);
-      throw new Error('Lỗi khi tạo mã QR: ' + error.message);
+      console.error('Generate SePay QR Code URL error:', error.message);
+      throw new Error('Lỗi khi tạo URL QR: ' + error.message);
     }
   },
 
