@@ -38,7 +38,7 @@ module.exports = {
 
         // Kiểm tra API Key trong header
         const authHeader = req.headers['authorization'];
-        const expectedApiKey = process.env.SEPAY_API_KEY; // Lưu API Key trong biến môi trường
+        const expectedApiKey = '7RIT2UZLK1JA5LTNHVGXNMQUKDJSQ0KLFVW8TD0G2HBC9AUFRHDODHXXYQTRISIJ'; // Lưu API Key trong biến môi trường
         if (!authHeader || authHeader !== `Apikey ${expectedApiKey}`) {
           return res.status(401).json({
             success: false,
