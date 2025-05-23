@@ -48,9 +48,23 @@ module.exports = {
             });
           }
 
+          // Kiểm tra xem user đã tạo nhóm cho gói miễn phí chưa
+          const existingFreeGroup = await GroupModel.findOne({
+            owner_id,
+            package_id,
+          });
+          if (existingFreeGroup) {
+            return reject({
+              status: 403,
+              ok: false,
+              message: "Bạn đã tạo một nhóm cho gói miễn phí này",
+            });
+          }
+
           const group = await GroupModel.create({
             group_name,
             owner_id,
+            package_id,
           });
 
           return resolve({
@@ -110,10 +124,20 @@ module.exports = {
           });
         }
 
+        // Kiểm tra xem purchase_id đã được sử dụng để tạo nhóm chưa
+        if (purchase.group_id) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Giao dịch này đã được sử dụng để tạo một nhóm",
+          });
+        }
+
         // Tạo nhóm
         const group = await GroupModel.create({
           group_name,
           owner_id,
+          package_id,
         });
 
         // Cập nhật group_id trong purchase
