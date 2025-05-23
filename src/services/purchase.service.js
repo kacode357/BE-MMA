@@ -346,77 +346,60 @@ module.exports = {
     }),
 
   completePurchaseService: (user_id, purchase_id) =>
-    new Promise(async (resolve, reject) => {
-      try {
-        if (!user_id || !purchase_id) {
-          return reject({
-            status: 400,
-            ok: false,
-            message: "user_id và purchase_id là bắt buộc",
-          });
+  new Promise(async (resolve, reject) => {
+    try {
+      if (!user_id || !purchase_id) {
+        return reject({
+          status: 400,
+          ok: false,
+          message: "user_id và purchase_id là bắt buộc",
+        });
+      }
+
+      const user = await UserModel.findById(user_id);
+      if (!user) {
+        return reject({
+          status: 404,
+          ok: false,
+          message: "Người dùng không tồn tại",
+        });
+      }
+
+      const purchase = await PurchaseModel.findById(purchase_id)
+        .populate('package_id', 'package_name price is_premium')
+        .populate('user_id', 'username')
+        .lean();
+      if (!purchase) {
+        return reject({
+          status: 404,
+          ok: false,
+          message: "Giao dịch không tồn tại",
+        });
+      }
+
+      if (purchase.user_id._id.toString() !== user_id) {
+        return reject({
+          status: 403,
+          ok: false,
+          message: "Bạn không có quyền hoàn tất giao dịch này",
+        });
+      }
+
+      console.log('Purchase:', purchase);
+
+      // Nếu giao dịch đã hoàn tất, kiểm tra và nâng cấp role nếu cần
+      if (purchase.status === 'completed') {
+        let updatedRole = undefined;
+        if (purchase.package_id.is_premium && user.role !== 'premium') {
+          await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
+          console.log(`User ${user_id} role updated to premium (post-completion)`);
+          updatedRole = 'premium';
         }
 
-        const user = await UserModel.findById(user_id);
-        if (!user) {
-          return reject({
-            status: 404,
-            ok: false,
-            message: "Người dùng không tồn tại",
-          });
-        }
-
-        const purchase = await PurchaseModel.findById(purchase_id)
-          .populate('package_id', 'package_name price is_premium')
-          .populate('user_id', 'username')
-          .lean();
-        if (!purchase) {
-          return reject({
-            status: 404,
-            ok: false,
-            message: "Giao dịch không tồn tại",
-          });
-        }
-
-        if (purchase.user_id._id.toString() !== user_id) {
-          return reject({
-            status: 403,
-            ok: false,
-            message: "Bạn không có quyền hoàn tất giao dịch này",
-          });
-        }
-
-        if (purchase.status === 'completed') {
-          return resolve({
-            status: 200,
-            ok: true,
-            message: "Giao dịch đã được hoàn tất trước đó",
-            data: {
-              purchase_id: purchase._id,
-              created_at: purchase.purchase_date,
-              package_name: purchase.package_id.package_name,
-              price: purchase.package_id.price,
-              user_id: purchase.user_id._id,
-              username: purchase.user_id.username,
-              status: purchase.status,
-            },
-          });
-        }
-
-        // Cập nhật trạng thái giao dịch thành completed
-        await PurchaseModel.findByIdAndUpdate(purchase_id, { status: 'completed' }, { new: true });
-
-        // Nếu gói là Premium, nâng cấp role của người dùng
-        if (purchase.package_id.is_premium) {
-          if (user.role !== 'premium') {
-            await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
-            console.log(`User ${user_id} role updated to premium`);
-          }
-        }
-
-        resolve({
+        return resolve({
           status: 200,
           ok: true,
-          message: "Hoàn tất giao dịch thành công" + (purchase.package_id.is_premium ? " và đã nâng cấp role Premium" : ""),
+          message: "Giao dịch đã được hoàn tất trước đó" + (updatedRole ? " và đã nâng cấp role Premium" : ""),
           data: {
             purchase_id: purchase._id,
             created_at: purchase.purchase_date,
@@ -424,16 +407,49 @@ module.exports = {
             price: purchase.package_id.price,
             user_id: purchase.user_id._id,
             username: purchase.user_id.username,
-            status: 'completed',
-            updated_role: purchase.package_id.is_premium ? 'premium' : undefined,
+            status: purchase.status,
+            updated_role: updatedRole,
           },
         });
-      } catch (error) {
-        reject({
-          status: 500,
-          ok: false,
-          message: "Lỗi khi hoàn tất giao dịch: " + error.message,
-        });
       }
-    }),
+
+      console.log('Purchase:');
+      // Cập nhật trạng thái giao dịch thành completed
+      await PurchaseModel.findByIdAndUpdate(purchase_id, { status: 'completed' }, { new: true });
+      console.log(`Purchase ${purchase_id} status updated to completed`);
+
+      // Nếu gói là Premium, nâng cấp role của người dùng
+      console.log(`Purchase package is premium: ${purchase.package_id.is_premium}`);
+      let updatedRole = undefined;
+      if (purchase.package_id.is_premium) {
+        if (user.role !== 'premium') {
+          await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
+          console.log(`User ${user_id} role updated to premium`);
+          updatedRole = 'premium';
+        }
+      }
+
+      resolve({
+        status: 200,
+        ok: true,
+        message: "Hoàn tất giao dịch thành công" + (purchase.package_id.is_premium ? " và đã nâng cấp role Premium" : ""),
+        data: {
+          purchase_id: purchase._id,
+          created_at: purchase.purchase_date,
+          package_name: purchase.package_id.package_name,
+          price: purchase.package_id.price,
+          user_id: purchase.user_id._id,
+          username: purchase.user_id.username,
+          status: 'completed',
+          updated_role: updatedRole,
+        },
+      });
+    } catch (error) {
+      reject({
+        status: 500,
+        ok: false,
+        message: "Lỗi khi hoàn tất giao dịch: " + error.message,
+      });
+    }
+  }),
 };
