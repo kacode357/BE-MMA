@@ -8,4 +8,7 @@ router.post("/purchases", PurchaseController.createPurchaseController);
 // Tìm kiếm giao dịch mua
 router.post("/purchases/search", PurchaseController.searchPurchasesController);
 
+// Kiểm tra trạng thái giao dịch mua
+router.post("/purchases/check", PurchaseController.checkPurchaseController);
+
 module.exports = router;

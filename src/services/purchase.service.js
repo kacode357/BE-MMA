@@ -44,7 +44,33 @@ module.exports = {
           });
         }
 
-        // Tạo giao dịch mua với group_id = null
+        // Kiểm tra xem đã có purchase chưa
+        const existingPurchase = await PurchaseModel.findOne({
+          user_id,
+          package_id,
+          status: { $in: ['pending', 'completed'] }, // Chỉ kiểm tra purchase ở trạng thái pending hoặc completed
+        })
+          .populate('package_id', 'package_name')
+          .populate('user_id', 'username')
+          .lean();
+
+        if (existingPurchase) {
+          return resolve({
+            status: 200,
+            ok: true,
+            message: "Giao dịch mua đã tồn tại, không cần tạo mới",
+            data: {
+              purchase_id: existingPurchase._id,
+              created_at: existingPurchase.purchase_date,
+              package_name: existingPurchase.package_id.package_name,
+              user_id: existingPurchase.user_id._id,
+              username: existingPurchase.user_id.username,
+              status: existingPurchase.status,
+            },
+          });
+        }
+
+        // Tạo giao dịch mua với group_id = null nếu chưa có purchase
         const purchase = await PurchaseModel.create({
           user_id,
           package_id,
@@ -61,7 +87,7 @@ module.exports = {
             created_at: purchase.purchase_date,
             package_name: package.package_name,
             user_id: purchase.user_id,
-            username: user.username, // Thêm username của người dùng
+            username: user.username,
           },
         });
       } catch (error) {
@@ -148,6 +174,79 @@ module.exports = {
           status: 500,
           ok: false,
           message: "Lỗi khi tìm kiếm giao dịch mua: " + error.message,
+        });
+      }
+    }),
+
+  checkPurchaseService: (user_id, package_id) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        // Validate required fields
+        if (!user_id || !package_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id và package_id là bắt buộc",
+          });
+        }
+
+        // Kiểm tra user tồn tại
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        // Kiểm tra package tồn tại
+        const package = await PackageModel.findById(package_id);
+        if (!package) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+
+        // Kiểm tra xem đã có purchase chưa
+        const existingPurchase = await PurchaseModel.findOne({
+          user_id,
+          package_id,
+          status: { $in: ['pending', 'completed'] }, // Chỉ kiểm tra purchase ở trạng thái pending hoặc completed
+        })
+          .populate('package_id', 'package_name')
+          .populate('user_id', 'username')
+          .lean();
+
+        if (existingPurchase) {
+          return resolve({
+            status: 200,
+            ok: true,
+            message: "Giao dịch mua đã tồn tại",
+            data: {
+              purchase_id: existingPurchase._id,
+              created_at: existingPurchase.purchase_date,
+              package_name: existingPurchase.package_id.package_name,
+              user_id: existingPurchase.user_id._id,
+              username: existingPurchase.user_id.username,
+              status: existingPurchase.status,
+            },
+          });
+        }
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Chưa có giao dịch mua, có thể tạo mới",
+          data: null,
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi kiểm tra giao dịch mua: " + error.message,
         });
       }
     }),
