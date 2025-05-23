@@ -28,6 +28,16 @@ module.exports = {
           });
         }
 
+        // Kiểm tra xem user đã tạo nhóm nào chưa
+        const existingGroup = await GroupModel.findOne({ owner_id });
+        if (existingGroup) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn đã tạo một nhóm. Mỗi người chỉ được tạo một nhóm duy nhất.",
+          });
+        }
+
         // Kiểm tra package tồn tại
         const package = await PackageModel.findById(package_id);
         if (!package) {
@@ -45,19 +55,6 @@ module.exports = {
               status: 403,
               ok: false,
               message: "Chỉ user Premium mới được tạo nhóm",
-            });
-          }
-
-          // Kiểm tra xem user đã tạo nhóm cho gói miễn phí chưa
-          const existingFreeGroup = await GroupModel.findOne({
-            owner_id,
-            package_id,
-          });
-          if (existingFreeGroup) {
-            return reject({
-              status: 403,
-              ok: false,
-              message: "Bạn đã tạo một nhóm cho gói miễn phí này",
             });
           }
 
@@ -121,15 +118,6 @@ module.exports = {
             status: 403,
             ok: false,
             message: "Chỉ user Premium mới được tạo nhóm",
-          });
-        }
-
-        // Kiểm tra xem purchase_id đã được sử dụng để tạo nhóm chưa
-        if (purchase.group_id) {
-          return reject({
-            status: 403,
-            ok: false,
-            message: "Giao dịch này đã được sử dụng để tạo một nhóm",
           });
         }
 
