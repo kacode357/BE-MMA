@@ -20,4 +20,21 @@ module.exports = {
         });
       }
     }),
+
+  searchPurchasesController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { searchCondition, pageInfo } = req.body;
+
+        const result = await PurchaseService.searchPurchasesService(searchCondition, pageInfo);
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi tìm kiếm giao dịch mua",
+        });
+      }
+    }),
 };
