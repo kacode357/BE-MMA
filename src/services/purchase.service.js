@@ -110,6 +110,8 @@ module.exports = {
 
         // Check user role from req.user (set by auth middleware)
         const userRole = req.user.role;
+        console.log('User role in searchPurchasesService:', userRole);
+
         if (!['admin', 'user'].includes(userRole)) {
           return reject({
             status: 403,
@@ -256,6 +258,123 @@ module.exports = {
           status: 500,
           ok: false,
           message: "Lỗi khi kiểm tra giao dịch mua: " + error.message,
+        });
+      }
+    }),
+
+  upgradePremiumService: (user_id, package_id) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        // Validate required fields
+        if (!user_id || !package_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id và package_id là bắt buộc",
+          });
+        }
+
+        // Check if user exists
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        // Check if user is already premium
+        if (user.role === 'premium') {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Người dùng đã có vai trò Premium, không cần nâng cấp lại",
+          });
+        }
+
+        // Check if package exists
+        const package = await PackageModel.findById(package_id);
+        console.log('Package:', package);
+        if (!package) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+
+        // Check if package is a premium package (you can add more logic here if needed)
+        if (package.package_name !== 'Premium Package') { // Giả định gói Premium có tên là 'Premium Package'
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Gói này không phải là gói Premium",
+          });
+        }
+
+        // Check for existing purchase
+        const existingPurchase = await PurchaseModel.findOne({
+          user_id,
+          package_id,
+          status: { $in: ['pending', 'completed'] },
+        })
+          .populate('package_id', 'package_name price')
+          .populate('user_id', 'username')
+          .lean();
+
+        if (existingPurchase) {
+          // If purchase exists, proceed to update role
+          await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
+
+          return resolve({
+            status: 200,
+            ok: true,
+            message: "Nâng cấp role Premium thành công (giao dịch đã tồn tại)",
+            data: {
+              purchase_id: existingPurchase._id,
+              created_at: existingPurchase.purchase_date,
+              package_name: existingPurchase.package_id.package_name,
+              price: existingPurchase.package_id.price,
+              user_id: existingPurchase.user_id._id,
+              username: existingPurchase.user_id.username,
+              status: existingPurchase.status,
+              updated_role: 'premium',
+            },
+          });
+        }
+
+        // Create new purchase with group_id = null
+        const purchase = await PurchaseModel.create({
+          user_id,
+          package_id,
+          group_id: null,
+          status: "pending",
+        });
+
+        // Update user role to premium
+        await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
+
+        resolve({
+          status: 201,
+          ok: true,
+          message: "Tạo giao dịch và nâng cấp role Premium thành công",
+          data: {
+            purchase_id: purchase._id,
+            created_at: purchase.purchase_date,
+            package_name: package.package_name,
+            price: package.price,
+            user_id: purchase.user_id,
+            username: user.username,
+            status: purchase.status,
+            updated_role: 'premium',
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi nâng cấp role Premium: " + error.message,
         });
       }
     }),

@@ -59,7 +59,7 @@ module.exports = {
     new Promise(async (resolve, reject) => {
       try {
         const { package_id } = req.body;
-        const user_id = req.user._id; // Lấy user_id từ req.user (được thêm bởi middleware auth)
+        const user_id = req.user._id; 
 
         const result = await PurchaseService.upgradePremiumService(user_id, package_id);
 
