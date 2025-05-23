@@ -23,17 +23,35 @@ module.exports = {
       }
     }),
 
-  // Xử lý Webhook từ SePay
+  checkPaymentController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { user_id, payment_id, reference_code } = req.body;
+
+        const result = await PaymentService.checkPaymentService({
+          user_id,
+          payment_id,
+          reference_code,
+        });
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi kiểm tra thanh toán",
+        });
+      }
+    }),
+
   handleSepayWebhook: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        // Lấy IP thực tế từ header x-forwarded-for
         const forwardedIps = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         const clientIp = forwardedIps ? forwardedIps.split(',')[0].trim() : req.connection.remoteAddress;
 
         console.log('Webhook client IP:', clientIp);
 
-        // Kiểm tra IP của SePay
         if (clientIp !== '103.255.238.9') {
           return res.status(403).json({
             success: false,
@@ -41,9 +59,8 @@ module.exports = {
           });
         }
 
-        // Kiểm tra API Key trong header
         const authHeader = req.headers['authorization'];
-        const expectedApiKey = process.env.SEPAY_API_KEY; // Lấy từ biến môi trường
+        const expectedApiKey = process.env.SEPAY_API_KEY;
         if (!authHeader || authHeader !== `Apikey ${expectedApiKey}`) {
           return res.status(401).json({
             success: false,
@@ -51,7 +68,6 @@ module.exports = {
           });
         }
 
-        // Lấy dữ liệu từ Webhook
         const data = req.body;
         console.log('Webhook data:', data);
 

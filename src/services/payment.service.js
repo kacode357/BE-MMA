@@ -84,10 +84,10 @@ const PaymentService = {
           amount,
           payment_method,
           payment_status: "pending",
-          referenceCode: `PAY${Date.now()}`, // Tạo referenceCode đơn giản hơn
+          referenceCode: `PAY${Date.now()}`,
         });
 
-        // Tạo URL QR Code động theo tài liệu SePay
+        // Tạo URL QR Code động
         const qrCodeUrl = PaymentService.generateSepayQRCodeUrl(payment, package.price);
 
         resolve({
@@ -111,14 +111,92 @@ const PaymentService = {
       }
     }),
 
-  // Tạo URL QR Code động theo tài liệu SePay
+  checkPaymentService: (checkData) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { user_id, payment_id, reference_code } = checkData;
+
+        // Validate required fields
+        if (!user_id || (!payment_id && !reference_code)) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id và (payment_id hoặc reference_code) là bắt buộc",
+          });
+        }
+
+        // Kiểm tra user tồn tại
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        // Tìm payment dựa trên payment_id hoặc reference_code
+        const query = payment_id ? { _id: payment_id } : { referenceCode: reference_code };
+        const payment = await PaymentModel.findOne(query).populate('purchase_id');
+        if (!payment) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Thanh toán không tồn tại",
+          });
+        }
+
+        // Kiểm tra quyền truy cập
+        if (payment.purchase_id.user_id.toString() !== user_id) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không có quyền xem thanh toán này",
+          });
+        }
+
+        // Lấy thông tin package
+        const package = await PackageModel.findById(payment.purchase_id.package_id);
+        if (!package) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Kiểm tra thanh toán thành công",
+          data: {
+            payment_id: payment._id,
+            purchase_id: payment.purchase_id._id,
+            amount: payment.amount,
+            payment_method: payment.payment_method,
+            payment_status: payment.payment_status,
+            reference_code: payment.referenceCode,
+            qr_code_url: payment.payment_status === 'pending' ? PaymentService.generateSepayQRCodeUrl(payment, payment.amount) : null,
+            package_name: package.package_name,
+            purchase_status: payment.purchase_id.status,
+            created_at: payment.createdAt,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi kiểm tra thanh toán: " + error.message,
+        });
+      }
+    }),
+
   generateSepayQRCodeUrl: (payment, amount) => {
     try {
-      const accountNumber = process.env.SEPAY_ACCOUNT_NUMBER || "16697391"; // Số tài khoản ngân hàng
-      const bankName = process.env.SEPAY_BANK_NAME || "ACB"; // Tên ngân hàng
+      const accountNumber = process.env.SEPAY_ACCOUNT_NUMBER || "16697391";
+      const bankName = process.env.SEPAY_BANK_NAME || "ACB";
       const description = encodeURIComponent(`Thanh toán ${payment.referenceCode}`);
 
-      // Tạo URL QR theo cấu trúc của SePay
       const qrCodeUrl = `https://qr.sepay.vn/img?acc=${accountNumber}&bank=${bankName}&amount=${amount}&des=${description}`;
 
       console.log('Generated SePay QR Code URL:', qrCodeUrl);
@@ -130,13 +208,11 @@ const PaymentService = {
     }
   },
 
-  // Xử lý Webhook từ SePay
   processSepayWebhook: (data) =>
     new Promise(async (resolve, reject) => {
       try {
         const { id, gateway, transactionDate, transferAmount, referenceCode, transferType, content } = data;
 
-        // Chỉ xử lý giao dịch "in" (tiền vào)
         if (transferType !== 'in') {
           return resolve({
             status: 200,
@@ -145,7 +221,6 @@ const PaymentService = {
           });
         }
 
-        // Kiểm tra chống trùng lặp giao dịch
         const existingPayment = await PaymentModel.findOne({
           sepayTransactionId: id,
         });
@@ -157,13 +232,11 @@ const PaymentService = {
           });
         }
 
-        // Tìm referenceCode từ nội dung chuyển khoản (content)
         const contentMatch = content.match(/PAY\d+/);
         const extractedReferenceCode = contentMatch ? contentMatch[0] : referenceCode;
 
         console.log('Extracted referenceCode from content:', extractedReferenceCode);
 
-        // Tìm bản ghi thanh toán dựa trên referenceCode
         const payment = await PaymentModel.findOne({ referenceCode: extractedReferenceCode });
         if (!payment) {
           return reject({
@@ -173,7 +246,6 @@ const PaymentService = {
           });
         }
 
-        // Kiểm tra số tiền
         if (transferAmount !== payment.amount) {
           payment.payment_status = 'failed';
           await payment.save();
@@ -191,9 +263,8 @@ const PaymentService = {
           });
         }
 
-        // Cập nhật trạng thái thanh toán và đơn hàng
         payment.payment_status = 'success';
-        payment.sepayTransactionId = id; // Lưu id giao dịch từ SePay để chống trùng lặp
+        payment.sepayTransactionId = id;
         await payment.save();
 
         const purchase = await PurchaseModel.findById(payment.purchase_id);
@@ -208,7 +279,6 @@ const PaymentService = {
         purchase.status = 'completed';
         await purchase.save();
 
-        // Cập nhật role = premium nếu là gói Premium
         const package = await PackageModel.findById(purchase.package_id);
         if (package && package.package_name.toLowerCase() === 'premium') {
           const user = await UserModel.findById(purchase.user_id);
