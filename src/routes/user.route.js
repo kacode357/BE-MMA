@@ -9,5 +9,5 @@ router.post("/users/refresh-token", UserController.resetTokenController);
 router.get("/users/current", auth, UserController.getCurrentLoginController);
 router.put("/users", auth, UserController.updateUserController); 
 router.put("/users/password", auth, UserController.changePasswordController);
-
+router.post("/users/search", auth, UserController.searchUsersController);
 module.exports = router;

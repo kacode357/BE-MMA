@@ -384,4 +384,34 @@ module.exports = {
         });
       }
     }),
+    searchUsersService: (keyword = '') =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const query = keyword
+          ? { username: { $regex: keyword, $options: 'i' } }
+          : {};
+        const users = await UserModel.find(query)
+          .select('_id username')
+          .limit(10)
+          .lean();
+
+        const pageData = users.map(user => ({
+          user_id: user._id,
+          username: user.username,
+        }));
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Tìm kiếm người dùng thành công",
+          data: pageData,
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi tìm kiếm người dùng: " + error.message,
+        });
+      }
+    }),
 };

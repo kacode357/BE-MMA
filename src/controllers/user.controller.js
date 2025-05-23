@@ -134,4 +134,18 @@ module.exports = {
         });
       }
     }),
+    searchUsersController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { keyword } = req.body;
+        const result = await UserService.searchUsersService(keyword);
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi tìm kiếm người dùng",
+        });
+      }
+    }),
 };
