@@ -90,6 +90,7 @@ module.exports = {
             price: package.price,
             user_id: purchase.user_id,
             username: user.username,
+            status: purchase.status,
           },
         });
       } catch (error) {
@@ -104,11 +105,9 @@ module.exports = {
   searchPurchasesService: (req, searchCondition = {}, pageInfo = {}) =>
     new Promise(async (resolve, reject) => {
       try {
-        // Default values for searchCondition and pageInfo
         const { keyword = '', status = '' } = searchCondition;
         const { pageNum = 1, pageSize = 10 } = pageInfo;
 
-        // Check user role from req.user (set by auth middleware)
         const userRole = req.user.role;
         console.log('User role in searchPurchasesService:', userRole);
 
@@ -120,13 +119,11 @@ module.exports = {
           });
         }
 
-        // Build search query
         const query = {};
         if (userRole === 'user') {
           query.user_id = req.user._id;
         }
 
-        // Search by keyword in package_name
         if (keyword) {
           const packageQuery = { package_name: { $regex: keyword, $options: 'i' } };
           const packages = await PackageModel.find(packageQuery).select('_id');
@@ -134,12 +131,10 @@ module.exports = {
           query.package_id = { $in: packageIds };
         }
 
-        // Search by status
         if (status) {
           query.status = { $in: [status] };
         }
 
-        // Paginate and fetch purchases
         const skip = (pageNum - 1) * pageSize;
         const totalItems = await PurchaseModel.countDocuments(query);
         const purchases = await PurchaseModel.find(query)
@@ -149,10 +144,8 @@ module.exports = {
           .limit(pageSize)
           .lean();
 
-        // Calculate pagination info
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        // Format response
         const pageData = purchases.map(purchase => ({
           purchase_id: purchase._id,
           user_id: purchase.user_id._id,
@@ -191,7 +184,6 @@ module.exports = {
   checkPurchaseService: (user_id, package_id) =>
     new Promise(async (resolve, reject) => {
       try {
-        // Validate required fields
         if (!user_id || !package_id) {
           return reject({
             status: 400,
@@ -200,7 +192,6 @@ module.exports = {
           });
         }
 
-        // Check if user exists
         const user = await UserModel.findById(user_id);
         if (!user) {
           return reject({
@@ -210,9 +201,8 @@ module.exports = {
           });
         }
 
-        // Check if package exists
-        const package = await PackageModel.findById(package_id);
-        if (!package) {
+        const packageData = await PackageModel.findById(package_id);
+        if (!packageData) {
           return reject({
             status: 404,
             ok: false,
@@ -220,7 +210,6 @@ module.exports = {
           });
         }
 
-        // Check for existing purchase
         const existingPurchase = await PurchaseModel.findOne({
           user_id,
           package_id,
@@ -265,7 +254,6 @@ module.exports = {
   upgradePremiumService: (user_id, package_id) =>
     new Promise(async (resolve, reject) => {
       try {
-        // Validate required fields
         if (!user_id || !package_id) {
           return reject({
             status: 400,
@@ -274,7 +262,6 @@ module.exports = {
           });
         }
 
-        // Check if user exists
         const user = await UserModel.findById(user_id);
         if (!user) {
           return reject({
@@ -284,19 +271,9 @@ module.exports = {
           });
         }
 
-        // Check if user is already premium
-        if (user.role === 'premium') {
-          return reject({
-            status: 400,
-            ok: false,
-            message: "Người dùng đã có vai trò Premium, không cần nâng cấp lại",
-          });
-        }
-
-        // Check if package exists
-        const package = await PackageModel.findById(package_id);
-        console.log('Package:', package);
-        if (!package) {
+        const packageData = await PackageModel.findById(package_id);
+        console.log('Package:', packageData);
+        if (!packageData) {
           return reject({
             status: 404,
             ok: false,
@@ -304,8 +281,7 @@ module.exports = {
           });
         }
 
-        // Check if package is a premium package (you can add more logic here if needed)
-        if (package.package_name !== 'Premium Package') { // Giả định gói Premium có tên là 'Premium Package'
+        if (!packageData.is_premium) {
           return reject({
             status: 400,
             ok: false,
@@ -313,7 +289,6 @@ module.exports = {
           });
         }
 
-        // Check for existing purchase
         const existingPurchase = await PurchaseModel.findOne({
           user_id,
           package_id,
@@ -324,13 +299,10 @@ module.exports = {
           .lean();
 
         if (existingPurchase) {
-          // If purchase exists, proceed to update role
-          await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
-
           return resolve({
             status: 200,
             ok: true,
-            message: "Nâng cấp role Premium thành công (giao dịch đã tồn tại)",
+            message: "Giao dịch mua đã tồn tại, vui lòng hoàn tất thanh toán để nâng cấp role Premium",
             data: {
               purchase_id: existingPurchase._id,
               created_at: existingPurchase.purchase_date,
@@ -339,12 +311,10 @@ module.exports = {
               user_id: existingPurchase.user_id._id,
               username: existingPurchase.user_id.username,
               status: existingPurchase.status,
-              updated_role: 'premium',
             },
           });
         }
 
-        // Create new purchase with group_id = null
         const purchase = await PurchaseModel.create({
           user_id,
           package_id,
@@ -352,29 +322,117 @@ module.exports = {
           status: "pending",
         });
 
-        // Update user role to premium
-        await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
-
         resolve({
           status: 201,
           ok: true,
-          message: "Tạo giao dịch và nâng cấp role Premium thành công",
+          message: "Tạo giao dịch mua thành công, vui lòng hoàn tất thanh toán để nâng cấp role Premium",
           data: {
             purchase_id: purchase._id,
             created_at: purchase.purchase_date,
-            package_name: package.package_name,
-            price: package.price,
+            package_name: packageData.package_name,
+            price: packageData.price,
             user_id: purchase.user_id,
             username: user.username,
             status: purchase.status,
-            updated_role: 'premium',
           },
         });
       } catch (error) {
         reject({
           status: 500,
           ok: false,
-          message: "Lỗi khi nâng cấp role Premium: " + error.message,
+          message: "Lỗi khi tạo giao dịch nâng cấp Premium: " + error.message,
+        });
+      }
+    }),
+
+  completePurchaseService: (user_id, purchase_id) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        if (!user_id || !purchase_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id và purchase_id là bắt buộc",
+          });
+        }
+
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        const purchase = await PurchaseModel.findById(purchase_id)
+          .populate('package_id', 'package_name price is_premium')
+          .populate('user_id', 'username')
+          .lean();
+        if (!purchase) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Giao dịch không tồn tại",
+          });
+        }
+
+        if (purchase.user_id._id.toString() !== user_id) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không có quyền hoàn tất giao dịch này",
+          });
+        }
+
+        if (purchase.status === 'completed') {
+          return resolve({
+            status: 200,
+            ok: true,
+            message: "Giao dịch đã được hoàn tất trước đó",
+            data: {
+              purchase_id: purchase._id,
+              created_at: purchase.purchase_date,
+              package_name: purchase.package_id.package_name,
+              price: purchase.package_id.price,
+              user_id: purchase.user_id._id,
+              username: purchase.user_id.username,
+              status: purchase.status,
+            },
+          });
+        }
+
+        // Cập nhật trạng thái giao dịch thành completed
+        await PurchaseModel.findByIdAndUpdate(purchase_id, { status: 'completed' }, { new: true });
+
+        // Nếu gói là Premium, nâng cấp role của người dùng
+        if (purchase.package_id.is_premium) {
+          if (user.role !== 'premium') {
+            await UserModel.findByIdAndUpdate(user_id, { role: 'premium' }, { new: true });
+            console.log(`User ${user_id} role updated to premium`);
+          }
+        }
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Hoàn tất giao dịch thành công" + (purchase.package_id.is_premium ? " và đã nâng cấp role Premium" : ""),
+          data: {
+            purchase_id: purchase._id,
+            created_at: purchase.purchase_date,
+            package_name: purchase.package_id.package_name,
+            price: purchase.package_id.price,
+            user_id: purchase.user_id._id,
+            username: purchase.user_id.username,
+            status: 'completed',
+            updated_role: purchase.package_id.is_premium ? 'premium' : undefined,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi hoàn tất giao dịch: " + error.message,
         });
       }
     }),

@@ -59,7 +59,7 @@ module.exports = {
     new Promise(async (resolve, reject) => {
       try {
         const { package_id } = req.body;
-        const user_id = req.user._id; 
+        const user_id = req.user._id;
 
         const result = await PurchaseService.upgradePremiumService(user_id, package_id);
 
@@ -69,6 +69,24 @@ module.exports = {
         return res.status(500).json({
           ok: false,
           message: error.message || "Lỗi server khi nâng cấp role Premium",
+        });
+      }
+    }),
+
+  completePurchaseController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { purchase_id } = req.body;
+        const user_id = req.user._id;
+
+        const result = await PurchaseService.completePurchaseService(user_id, purchase_id);
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi hoàn tất giao dịch",
         });
       }
     }),

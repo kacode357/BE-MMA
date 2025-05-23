@@ -15,4 +15,7 @@ router.post("/purchases/check", auth, PurchaseController.checkPurchaseController
 // Nâng cấp role lên Premium
 router.post("/purchases/upgrade-premium", auth, PurchaseController.upgradePremiumController);
 
+// Hoàn tất giao dịch và nâng cấp role nếu là gói Premium
+router.post("/purchases/complete", auth, PurchaseController.completePurchaseController);
+
 module.exports = router;
