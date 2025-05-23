@@ -17,7 +17,7 @@ module.exports = {
           });
         }
 
-        // Kiểm tra user tồn tại
+        // Check if user exists
         const user = await UserModel.findById(user_id);
         if (!user) {
           return reject({
@@ -27,7 +27,7 @@ module.exports = {
           });
         }
 
-        // Kiểm tra package tồn tại và không miễn phí
+        // Check if package exists and is not free
         const package = await PackageModel.findById(package_id);
         if (!package) {
           return reject({
@@ -44,13 +44,13 @@ module.exports = {
           });
         }
 
-        // Kiểm tra xem đã có purchase chưa
+        // Check for existing purchase
         const existingPurchase = await PurchaseModel.findOne({
           user_id,
           package_id,
           status: { $in: ['pending', 'completed'] },
         })
-          .populate('package_id', 'package_name')
+          .populate('package_id', 'package_name price')
           .populate('user_id', 'username')
           .lean();
 
@@ -63,6 +63,7 @@ module.exports = {
               purchase_id: existingPurchase._id,
               created_at: existingPurchase.purchase_date,
               package_name: existingPurchase.package_id.package_name,
+              price: existingPurchase.package_id.price,
               user_id: existingPurchase.user_id._id,
               username: existingPurchase.user_id.username,
               status: existingPurchase.status,
@@ -70,7 +71,7 @@ module.exports = {
           });
         }
 
-        // Tạo giao dịch mua với group_id = null nếu chưa có purchase
+        // Create new purchase with group_id = null
         const purchase = await PurchaseModel.create({
           user_id,
           package_id,
@@ -86,6 +87,7 @@ module.exports = {
             purchase_id: purchase._id,
             created_at: purchase.purchase_date,
             package_name: package.package_name,
+            price: package.price,
             user_id: purchase.user_id,
             username: user.username,
           },
@@ -102,14 +104,12 @@ module.exports = {
   searchPurchasesService: (req, searchCondition = {}, pageInfo = {}) =>
     new Promise(async (resolve, reject) => {
       try {
-        // Gán giá trị mặc định cho searchCondition và pageInfo
+        // Default values for searchCondition and pageInfo
         const { keyword = '', status = '' } = searchCondition;
         const { pageNum = 1, pageSize = 10 } = pageInfo;
 
-        // Kiểm tra role của người dùng từ req.user (được thêm bởi middleware auth)
+        // Check user role from req.user (set by auth middleware)
         const userRole = req.user.role;
-        console.log('User role in searchPurchasesService:', userRole); // Log role để kiểm tra
-
         if (!['admin', 'user'].includes(userRole)) {
           return reject({
             status: 403,
@@ -118,16 +118,13 @@ module.exports = {
           });
         }
 
-        // Xây dựng điều kiện tìm kiếm
+        // Build search query
         const query = {};
-
-        // Nếu là user, chỉ cho phép tìm kiếm purchase của chính họ
         if (userRole === 'user') {
           query.user_id = req.user._id;
-          console.log('User search - user_id:', req.user._id); // Log user_id để kiểm tra
         }
 
-        // Tìm kiếm theo keyword (tìm trong package_name thông qua populate)
+        // Search by keyword in package_name
         if (keyword) {
           const packageQuery = { package_name: { $regex: keyword, $options: 'i' } };
           const packages = await PackageModel.find(packageQuery).select('_id');
@@ -135,31 +132,32 @@ module.exports = {
           query.package_id = { $in: packageIds };
         }
 
-        // Tìm kiếm theo status
+        // Search by status
         if (status) {
           query.status = { $in: [status] };
         }
 
-        // Tìm kiếm và phân trang
+        // Paginate and fetch purchases
         const skip = (pageNum - 1) * pageSize;
         const totalItems = await PurchaseModel.countDocuments(query);
         const purchases = await PurchaseModel.find(query)
-          .populate('package_id', 'package_name')
+          .populate('package_id', 'package_name price')
           .populate('user_id', 'username')
           .skip(skip)
           .limit(pageSize)
           .lean();
 
-        // Tính toán thông tin phân trang
+        // Calculate pagination info
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        // Định dạng response
+        // Format response
         const pageData = purchases.map(purchase => ({
           purchase_id: purchase._id,
           user_id: purchase.user_id._id,
           username: purchase.user_id.username,
           package_id: purchase.package_id._id,
           package_name: purchase.package_id.package_name,
+          price: purchase.package_id.price,
           group_id: purchase.group_id,
           status: purchase.status,
           purchase_date: purchase.purchase_date,
@@ -200,7 +198,7 @@ module.exports = {
           });
         }
 
-        // Kiểm tra user tồn tại
+        // Check if user exists
         const user = await UserModel.findById(user_id);
         if (!user) {
           return reject({
@@ -210,7 +208,7 @@ module.exports = {
           });
         }
 
-        // Kiểm tra package tồn tại
+        // Check if package exists
         const package = await PackageModel.findById(package_id);
         if (!package) {
           return reject({
@@ -220,13 +218,13 @@ module.exports = {
           });
         }
 
-        // Kiểm tra xem đã có purchase chưa
+        // Check for existing purchase
         const existingPurchase = await PurchaseModel.findOne({
           user_id,
           package_id,
           status: { $in: ['pending', 'completed'] },
         })
-          .populate('package_id', 'package_name')
+          .populate('package_id', 'package_name price')
           .populate('user_id', 'username')
           .lean();
 
@@ -239,6 +237,7 @@ module.exports = {
               purchase_id: existingPurchase._id,
               created_at: existingPurchase.purchase_date,
               package_name: existingPurchase.package_id.package_name,
+              price: existingPurchase.package_id.price,
               user_id: existingPurchase.user_id._id,
               username: existingPurchase.user_id.username,
               status: existingPurchase.status,
