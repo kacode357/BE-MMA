@@ -71,13 +71,23 @@ module.exports = {
           });
         }
 
-        // Kiểm tra user đã là thành viên chưa
+        // Kiểm tra user đã là thành viên của nhóm hiện tại
         const existingMember = await GroupMemberModel.findOne({ group_id, user_id });
         if (existingMember) {
           return reject({
             status: 400,
             ok: false,
-            message: "Người dùng đã là thành viên của nhóm",
+            message: "Người dùng đã là thành viên của nhóm này",
+          });
+        }
+
+        // Kiểm tra user đã tham gia nhóm khác
+        const userInOtherGroup = await GroupMemberModel.findOne({ user_id });
+        if (userInOtherGroup) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Người dùng đã là thành viên của một nhóm khác",
           });
         }
 
@@ -112,7 +122,7 @@ module.exports = {
   getAllGroupMembersService: (req, searchCondition = {}, pageInfo = {}) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { group_id = '', keyword = '' } = searchCondition;
+        const { group_id = "", keyword = "" } = searchCondition;
         const { pageNum = 1, pageSize = 10 } = pageInfo;
 
         const userRole = req.user.role;
@@ -128,54 +138,57 @@ module.exports = {
         }
 
         // Validate group_id if provided
-        let group = null;
-        if (group_id) {
-          group = await GroupModel.findById(group_id);
-          if (!group) {
-            return reject({
-              status: 404,
-              ok: false,
-              message: "Nhóm không tồn tại",
-            });
-          }
-
-          // Restrict access to group owner or admin
-          if (userRole !== 'admin' && group.owner_id.toString() !== userId.toString()) {
-            return reject({
-              status: 403,
-              ok: false,
-              message: "Bạn không có quyền xem thành viên của nhóm này",
-            });
-          }
+        if (!group_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "group_id là bắt buộc để tìm kiếm thành viên nhóm",
+          });
         }
 
-        const query = {};
-        if (group_id) {
-          query.group_id = group_id;
+        const group = await GroupModel.findById(group_id);
+        if (!group) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Nhóm không tồn tại",
+          });
         }
+
+        // Kiểm tra xem user có phải là owner hoặc thành viên của nhóm
+        const isOwner = group.owner_id.toString() === userId.toString();
+        const isMember = await GroupMemberModel.exists({ group_id, user_id: userId });
+
+        if (!isOwner && !isMember && userRole !== "admin") {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không có quyền xem thành viên của nhóm này",
+          });
+        }
+
+        const query = { group_id };
 
         // Search by username if keyword is provided
-        let userIds = [];
         if (keyword) {
           const users = await UserModel.find({
-            username: { $regex: keyword, $options: 'i' },
-          }).select('_id');
-          userIds = users.map(user => user._id);
-          query.user_id = { $in: userIds };
+            username: { $regex: keyword, $options: "i" },
+          }).select("_id");
+          query.user_id = { $in: users.map((user) => user._id) };
         }
 
         const skip = (pageNum - 1) * pageSize;
         const totalItems = await GroupMemberModel.countDocuments(query);
         const members = await GroupMemberModel.find(query)
-          .populate('user_id', 'username')
-          .populate('group_id', 'group_name')
+          .populate("user_id", "username")
+          .populate("group_id", "group_name")
           .skip(skip)
           .limit(pageSize)
           .lean();
 
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const pageData = members.map(member => ({
+        const pageData = members.map((member) => ({
           group_id: member.group_id._id,
           group_name: member.group_id.group_name,
           user_id: member.user_id._id,
@@ -202,6 +215,105 @@ module.exports = {
           status: 500,
           ok: false,
           message: "Lỗi khi tìm kiếm thành viên nhóm: " + error.message,
+        });
+      }
+    }),
+
+  deleteGroupMemberService: (req, memberData) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { group_id, user_id } = memberData;
+        const userRole = req.user.role;
+        const currentUserId = req.user._id;
+
+        // Validate required fields
+        if (!group_id || !user_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "group_id và user_id là bắt buộc",
+          });
+        }
+
+        // Validate role
+        if (!["admin", "premium"].includes(userRole)) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Chỉ admin hoặc user premium (owner) được phép xóa thành viên nhóm",
+          });
+        }
+
+        // Check if group exists
+        const group = await GroupModel.findById(group_id);
+        if (!group) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Nhóm không tồn tại",
+          });
+        }
+
+        // Check if user exists
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không tồn tại",
+          });
+        }
+
+        // Check if the current user is the group owner (unless admin)
+        const isOwner = group.owner_id.toString() === currentUserId.toString();
+        if (!isOwner && userRole !== "admin") {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không phải owner của nhóm",
+          });
+        }
+
+        // Check if the user to be deleted is a member of the group
+        const existingMember = await GroupMemberModel.findOne({ group_id, user_id });
+        if (!existingMember) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Người dùng không phải là thành viên của nhóm này",
+          });
+        }
+
+        // Prevent deleting the owner
+        if (group.owner_id.toString() === user_id) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Không thể xóa owner của nhóm",
+          });
+        }
+
+        // Delete the group member
+        await GroupMemberModel.deleteOne({ group_id, user_id });
+
+        // Revert user's role to 'user' (assuming they were premium due to group membership)
+        user.role = "user";
+        await user.save();
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Xóa thành viên nhóm thành công",
+          data: {
+            group_id,
+            user_id,
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi xóa thành viên nhóm: " + error.message,
         });
       }
     }),
