@@ -153,7 +153,7 @@ module.exports = {
   getAllGroupsService: (req, searchCondition = {}, pageInfo = {}) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { keyword = '', status = '' } = searchCondition; // Thêm status nếu cần
+        const { keyword = '', status = '' } = searchCondition;
         const { pageNum = 1, pageSize = 10 } = pageInfo;
 
         const userRole = req.user.role;
@@ -163,22 +163,19 @@ module.exports = {
           return reject({
             status: 403,
             ok: false,
-            message:
-              "Quyền không hợp lệ. Chỉ admin hoặc user mới được phép tìm kiếm.",
+            message: "Quyền không hợp lệ. Chỉ admin hoặc user mới được phép tìm kiếm.",
           });
         }
 
         const query = {};
         if (userRole === 'user') {
-          query.owner_id = req.user._id; // Chỉ lấy các nhóm của user hiện tại
+          query.owner_id = req.user._id;
         }
 
-        // Tìm kiếm theo keyword (tên nhóm)
         if (keyword) {
           query.group_name = { $regex: keyword, $options: 'i' };
         }
 
-        // Nếu có status, tìm kiếm theo status (nếu GroupModel có field status)
         if (status) {
           query.status = { $in: [status] };
         }
@@ -228,63 +225,198 @@ module.exports = {
         });
       }
     }),
-    getGroupByIdService: (groupId, user) =>
-  new Promise(async (resolve, reject) => {
-    try {
-      if (!groupId) {
-        return reject({
-          status: 400,
+
+  getGroupByIdService: (groupId, user) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        if (!groupId) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "group_id là bắt buộc",
+          });
+        }
+
+        const group = await GroupModel.findById(groupId)
+          .populate('owner_id', 'username')
+          .populate('package_id', 'package_name price is_premium')
+          .lean();
+
+        if (!group) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Nhóm không tồn tại",
+          });
+        }
+
+        if (user.role !== 'admin' && group.owner_id._id.toString() !== user._id.toString()) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không có quyền xem thông tin nhóm này",
+          });
+        }
+
+        const groupData = {
+          group_id: group._id,
+          group_name: group.group_name,
+          owner_id: group.owner_id._id,
+          owner_username: group.owner_id.username,
+          package_id: group.package_id._id,
+          package_name: group.package_id.package_name,
+          price: group.package_id.price,
+          is_premium: group.package_id.is_premium,
+          created_at: group.created_at,
+        };
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Lấy thông tin nhóm thành công",
+          data: groupData,
+        });
+      } catch (error) {
+        reject({
+          status: 500,
           ok: false,
-          message: "group_id là bắt buộc",
+          message: "Lỗi khi lấy thông tin nhóm: " + error.message,
         });
       }
+    }),
 
-      const group = await GroupModel.findById(groupId)
-        .populate('owner_id', 'username')
-        .populate('package_id', 'package_name price is_premium')
-        .lean();
+  updateGroupService: (groupId, updateData, user) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { group_name, package_id } = updateData;
 
-      if (!group) {
-        return reject({
-          status: 404,
+        if (!groupId) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "group_id là bắt buộc",
+          });
+        }
+
+        const group = await GroupModel.findById(groupId);
+        if (!group) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Nhóm không tồn tại",
+          });
+        }
+
+        if (user.role !== 'admin' && group.owner_id.toString() !== user._id.toString()) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không có quyền cập nhật nhóm này",
+          });
+        }
+
+        if (group_name) {
+          group.group_name = group_name;
+        }
+
+        if (package_id) {
+          const packageData = await PackageModel.findById(package_id);
+          if (!packageData) {
+            return reject({
+              status: 404,
+              ok: false,
+              message: "Gói không tồn tại",
+            });
+          }
+
+          if (packageData.price > 0) {
+            return reject({
+              status: 403,
+              ok: false,
+              message: "Không thể cập nhật sang gói trả phí trực tiếp",
+            });
+          }
+
+          group.package_id = package_id;
+        }
+
+        await group.save();
+
+        const updatedGroup = await GroupModel.findById(groupId)
+          .populate('owner_id', 'username')
+          .populate('package_id', 'package_name price is_premium')
+          .lean();
+
+        const groupData = {
+          group_id: updatedGroup._id,
+          group_name: updatedGroup.group_name,
+          owner_id: updatedGroup.owner_id._id,
+          owner_username: updatedGroup.owner_id.username,
+          package_id: updatedGroup.package_id._id,
+          package_name: updatedGroup.package_id.package_name,
+          price: updatedGroup.package_id.price,
+          is_premium: updatedGroup.package_id.is_premium,
+          created_at: updatedGroup.created_at,
+        };
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Cập nhật nhóm thành công",
+          data: groupData,
+        });
+      } catch (error) {
+        reject({
+          status: 500,
           ok: false,
-          message: "Nhóm không tồn tại",
+          message: "Lỗi khi cập nhật nhóm: " + error.message,
         });
       }
+    }),
 
-      // Kiểm tra quyền truy cập
-      if (user.role !== 'admin' && group.owner_id._id.toString() !== user._id.toString()) {
-        return reject({
-          status: 403,
+  deleteGroupService: (groupId, user) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        if (!groupId) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "group_id là bắt buộc",
+          });
+        }
+
+        const group = await GroupModel.findById(groupId);
+        if (!group) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Nhóm không tồn tại",
+          });
+        }
+
+        if (user.role !== 'admin' && group.owner_id.toString() !== user._id.toString()) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Bạn không có quyền xóa nhóm này",
+          });
+        }
+
+        await GroupModel.deleteOne({ _id: groupId });
+
+        await PurchaseModel.updateMany({ group_id: groupId }, { $unset: { group_id: "" } });
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Xóa nhóm thành công",
+        });
+      } catch (error) {
+        reject({
+          status: 500,
           ok: false,
-          message: "Bạn không có quyền xem thông tin nhóm này",
+          message: "Lỗi khi xóa nhóm: " + error.message,
         });
       }
-
-      const groupData = {
-        group_id: group._id,
-        group_name: group.group_name,
-        owner_id: group.owner_id._id,
-        owner_username: group.owner_id.username,
-        package_id: group.package_id._id,
-        package_name: group.package_id.package_name,
-        price: group.package_id.price,
-        is_premium: group.package_id.is_premium,
-        created_at: group.created_at,
-      };
-
-      resolve({
-        status: 200,
-        ok: true,
-        message: "Lấy thông tin nhóm thành công",
-        data: groupData,
-      });
-    } catch (error) {
-      reject({
-        status: 500,
-        ok: false,
-        message: "Lỗi khi lấy thông tin nhóm: " + error.message,
-      });
-    }
-  }),
+    }),
 };
