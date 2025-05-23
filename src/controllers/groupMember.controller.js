@@ -21,4 +21,27 @@ module.exports = {
         });
       }
     }),
+
+  getAllGroupMembersController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { group_id, keyword } = req.body;
+        const { pageNum, pageSize } = req.query;
+
+        const searchCondition = { group_id, keyword };
+        const pageInfo = {
+          pageNum: parseInt(pageNum) || 1,
+          pageSize: parseInt(pageSize) || 10,
+        };
+
+        const result = await GroupMemberService.getAllGroupMembersService(req, searchCondition, pageInfo);
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi tìm kiếm thành viên nhóm",
+        });
+      }
+    }),
 };
