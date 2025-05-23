@@ -6,7 +6,8 @@ const packageSchema = new mongoose.Schema({
   price: { type: Number, required: true, min: 0 },
   img_url: { type: String, trim: true, required: false },
   created_at: { type: Date, default: Date.now },
-  is_delete: { type: Boolean, default: false }, // Thêm field is_delete, mặc định là false
+  is_delete: { type: Boolean, default: false },
+  is_premium: { type: Boolean, default: false }, 
 });
 
 module.exports = mongoose.model("Package", packageSchema);

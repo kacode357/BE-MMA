@@ -24,7 +24,7 @@ module.exports = {
   searchPurchasesController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { searchCondition = {}, pageInfo = {} } = req.body; // Gán giá trị mặc định nếu không truyền
+        const { searchCondition = {}, pageInfo = {} } = req.body;
 
         const result = await PurchaseService.searchPurchasesService(req, searchCondition, pageInfo);
 
@@ -51,6 +51,24 @@ module.exports = {
         return res.status(500).json({
           ok: false,
           message: error.message || "Lỗi server khi kiểm tra giao dịch mua",
+        });
+      }
+    }),
+
+  upgradePremiumController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { package_id } = req.body;
+        const user_id = req.user._id; // Lấy user_id từ req.user (được thêm bởi middleware auth)
+
+        const result = await PurchaseService.upgradePremiumService(user_id, package_id);
+
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi nâng cấp role Premium",
         });
       }
     }),

@@ -7,7 +7,7 @@ module.exports = {
   createPackageService: (packageData) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { package_name, description, price, img_url, user_id } = packageData;
+        const { package_name, description, price, img_url, user_id, is_premium } = packageData;
 
         if (!user_id) {
           return reject({
@@ -47,6 +47,7 @@ module.exports = {
           description,
           price,
           img_url,
+          is_premium: is_premium || false, // Gán giá trị is_premium, mặc định là false nếu không truyền
         });
 
         resolve({
@@ -59,6 +60,8 @@ module.exports = {
             price: newPackage.price,
             img_url: newPackage.img_url,
             created_at: newPackage.created_at,
+            is_delete: newPackage.is_delete,
+            is_premium: newPackage.is_premium, // Thêm is_premium vào response
           },
         });
       } catch (error) {
@@ -90,8 +93,8 @@ module.exports = {
           });
         }
 
-        const package = await PackageModel.findById(package_id);
-        if (!package) {
+        const packageData = await PackageModel.findById(package_id);
+        if (!packageData) {
           return reject({
             status: 404,
             ok: false,
@@ -107,31 +110,33 @@ module.exports = {
             data: {
               has_access: true,
               package: {
-                package_id: package._id,
-                package_name: package.package_name,
-                description: package.description,
-                price: package.price,
-                img_url: package.img_url,
-                created_at: package.created_at,
+                package_id: packageData._id,
+                package_name: packageData.package_name,
+                description: packageData.description,
+                price: packageData.price,
+                img_url: packageData.img_url,
+                created_at: packageData.created_at,
+                is_premium: packageData.is_premium, // Thêm is_premium vào response
               },
             },
           });
         }
 
         // Kiểm tra gói miễn phí
-        if (package.price === 0) {
+        if (packageData.price === 0) {
           return resolve({
             status: 200,
             message: "Có quyền sử dụng gói miễn phí",
             data: {
               has_access: true,
               package: {
-                package_id: package._id,
-                package_name: package.package_name,
-                description: package.description,
-                price: package.price,
-                img_url: package.img_url,
-                created_at: package.created_at,
+                package_id: packageData._id,
+                package_name: packageData.package_name,
+                description: packageData.description,
+                price: packageData.price,
+                img_url: packageData.img_url,
+                created_at: packageData.created_at,
+                is_premium: packageData.is_premium, // Thêm is_premium vào response
               },
             },
           });
@@ -150,12 +155,13 @@ module.exports = {
             data: {
               has_access: true,
               package: {
-                package_id: package._id,
-                package_name: package.package_name,
-                description: package.description,
-                price: package.price,
-                img_url: package.img_url,
-                created_at: package.created_at,
+                package_id: packageData._id,
+                package_name: packageData.package_name,
+                description: packageData.description,
+                price: packageData.price,
+                img_url: packageData.img_url,
+                created_at: packageData.created_at,
+                is_premium: packageData.is_premium, // Thêm is_premium vào response
               },
             },
           });
@@ -173,12 +179,13 @@ module.exports = {
             data: {
               has_access: true,
               package: {
-                package_id: package._id,
-                package_name: package.package_name,
-                description: package.description,
-                price: package.price,
-                img_url: package.img_url,
-                created_at: package.created_at,
+                package_id: packageData._id,
+                package_name: packageData.package_name,
+                description: packageData.description,
+                price: packageData.price,
+                img_url: packageData.img_url,
+                created_at: packageData.created_at,
+                is_premium: packageData.is_premium, // Thêm is_premium vào response
               },
             },
           });
@@ -226,11 +233,11 @@ module.exports = {
           $and: [
             {
               $or: [
-                { package_name: { $regex: keyword, $options: 'i' } }, // Tìm kiếm theo package_name (không phân biệt hoa thường)
-                { description: { $regex: keyword, $options: 'i' } },  // Tìm kiếm theo description
+                { package_name: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } },
               ],
             },
-            { is_delete: is_delete }, // Lọc theo is_delete
+            { is_delete: is_delete },
           ],
         };
 
@@ -242,7 +249,7 @@ module.exports = {
         const packages = await PackageModel.find(searchQuery)
           .skip(skip)
           .limit(limit)
-          .sort({ created_at: -1 }); // Sắp xếp theo thời gian tạo mới nhất
+          .sort({ created_at: -1 });
 
         // Lấy tổng số gói phù hợp
         const total = await PackageModel.countDocuments(searchQuery);
@@ -259,6 +266,7 @@ module.exports = {
           img_url: pkg.img_url,
           created_at: pkg.created_at,
           is_delete: pkg.is_delete,
+          is_premium: pkg.is_premium, // Thêm is_premium vào response
         }));
 
         resolve({
@@ -282,6 +290,7 @@ module.exports = {
         });
       }
     }),
+
   getPackageByIdService: ({ package_id }) =>
     new Promise(async (resolve, reject) => {
       try {
@@ -313,6 +322,7 @@ module.exports = {
             img_url: packageData.img_url,
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
+            is_premium: packageData.is_premium, // Thêm is_premium vào response
           },
         });
       } catch (error) {
@@ -323,10 +333,10 @@ module.exports = {
         });
       }
     }),
-  updatePackageService: ({ package_id, package_name, description, price, img_url, user_id }) =>
+
+  updatePackageService: ({ package_id, package_name, description, price, img_url, user_id, is_premium }) =>
     new Promise(async (resolve, reject) => {
       try {
-
         if (!package_id) {
           return reject({
             status: 400,
@@ -364,7 +374,7 @@ module.exports = {
           const existingPackage = await PackageModel.findOne({
             package_name,
             is_delete: false,
-            _id: { $ne: package_id }, // Loại trừ gói đang được cập nhật
+            _id: { $ne: package_id },
           });
           if (existingPackage) {
             return reject({
@@ -395,7 +405,8 @@ module.exports = {
           }
           packageData.price = price;
         }
-        if (img_url) packageData.img_url = img_url;
+        if (img_url !== undefined) packageData.img_url = img_url;
+        if (is_premium !== undefined) packageData.is_premium = is_premium; // Cập nhật is_premium nếu được truyền
 
         await packageData.save();
 
@@ -410,6 +421,7 @@ module.exports = {
             img_url: packageData.img_url,
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
+            is_premium: packageData.is_premium, // Thêm is_premium vào response
           },
         });
       } catch (error) {
@@ -420,74 +432,76 @@ module.exports = {
         });
       }
     }),
-    softDeletePackageService: ({ package_id, user_id }) =>
-  new Promise(async (resolve, reject) => {
-    try {
-      if (!package_id) {
-        return reject({
-          status: 400,
+
+  softDeletePackageService: ({ package_id, user_id }) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        if (!package_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "package_id là bắt buộc",
+          });
+        }
+
+        if (!user_id) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "user_id là bắt buộc",
+          });
+        }
+
+        const user = await UserModel.findById(user_id);
+        if (!user || user.role !== "admin") {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Chỉ admin mới có thể xóa gói",
+          });
+        }
+
+        const packageData = await PackageModel.findById(package_id);
+        if (!packageData) {
+          return reject({
+            status: 404,
+            ok: false,
+            message: "Gói không tồn tại",
+          });
+        }
+
+        if (packageData.is_delete) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Gói đã bị xóa trước đó",
+          });
+        }
+
+        // Cập nhật is_delete thành true
+        packageData.is_delete = true;
+        await packageData.save();
+
+        resolve({
+          status: 200,
+          message: "Xóa gói thành công",
+          data: {
+            package_id: packageData._id,
+            package_name: packageData.package_name,
+            description: packageData.description,
+            price: packageData.price,
+            img_url: packageData.img_url,
+            created_at: packageData.created_at,
+            is_delete: packageData.is_delete,
+            is_premium: packageData.is_premium, // Thêm is_premium vào response
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
           ok: false,
-          message: "package_id là bắt buộc",
+          message: "Lỗi khi xóa mềm gói: " + error.message,
         });
       }
-
-      if (!user_id) {
-        return reject({
-          status: 400,
-          ok: false,
-          message: "user_id là bắt buộc",
-        });
-      }
-
-      const user = await UserModel.findById(user_id);
-      if (!user || user.role !== "admin") {
-        return reject({
-          status: 403,
-          ok: false,
-          message: "Chỉ admin mới có thể xóa gói",
-        });
-      }
-
-      const packageData = await PackageModel.findById(package_id);
-      if (!packageData) {
-        return reject({
-          status: 404,
-          ok: false,
-          message: "Gói không tồn tại",
-        });
-      }
-
-      if (packageData.is_delete) {
-        return reject({
-          status: 400,
-          ok: false,
-          message: "Gói đã bị xóa trước đó",
-        });
-      }
-
-      // Cập nhật is_delete thành true
-      packageData.is_delete = true;
-      await packageData.save();
-
-      resolve({
-        status: 200,
-        message: "Xóa gói thành công",
-        data: {
-          package_id: packageData._id,
-          package_name: packageData.package_name,
-          description: packageData.description,
-          price: packageData.price,
-          img_url: packageData.img_url,
-          created_at: packageData.created_at,
-          is_delete: packageData.is_delete,
-        },
-      });
-    } catch (error) {
-      reject({
-        status: 500,
-        ok: false,
-        message: "Lỗi khi xóa mềm gói: " + error.message,
-      });
-    }
-  }),
+    }),
 };

@@ -12,4 +12,7 @@ router.post("/purchases/search", auth, PurchaseController.searchPurchasesControl
 // Kiểm tra trạng thái giao dịch mua
 router.post("/purchases/check", auth, PurchaseController.checkPurchaseController);
 
+// Nâng cấp role lên Premium
+router.post("/purchases/upgrade-premium", auth, PurchaseController.upgradePremiumController);
+
 module.exports = router;
