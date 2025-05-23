@@ -4,7 +4,7 @@ module.exports = {
   createPackageController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { package_name, description, price, img_url, user_id, is_premium } = req.body; 
+        const { package_name, description, price, img_url, user_id, is_premium } = req.body;
 
         const result = await PackageService.createPackageService({
           package_name,
@@ -17,13 +17,15 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
+          ok: result.ok, // Thêm trường ok vào response
           message: result.message,
           data: result.data,
         });
       } catch (error) {
-        console.error(error.message);
+        console.error('Error in createPackageController:', error.message);
         return res.status(500).json({
           status: 500,
+          ok: false,
           message: error.message || "Lỗi server khi tạo gói",
         });
       }
@@ -42,13 +44,15 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
+          ok: result.ok,
           message: result.message,
           data: result.data,
         });
       } catch (error) {
-        console.error(error.message);
+        console.error('Error in checkPackageAccessController:', error.message);
         return res.status(500).json({
           status: 500,
+          ok: false,
           message: error.message || "Lỗi server khi kiểm tra quyền sử dụng gói",
         });
       }
@@ -57,7 +61,7 @@ module.exports = {
   getAllPackagesController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { searchCondition, pageInfo } = req.body;
+        const { searchCondition = {}, pageInfo = {} } = req.body; // Gán giá trị mặc định nếu không truyền
 
         const result = await PackageService.getAllPackagesService({
           searchCondition,
@@ -66,13 +70,15 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
+          ok: result.ok,
           message: result.message,
           data: result.data,
         });
       } catch (error) {
-        console.error(error.message);
+        console.error('Error in getAllPackagesController:', error.message);
         return res.status(500).json({
           status: 500,
+          ok: false,
           message: error.message || "Lỗi server khi tìm kiếm gói",
         });
       }
@@ -87,13 +93,15 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
+          ok: result.ok,
           message: result.message,
           data: result.data,
         });
       } catch (error) {
-        console.error(error.message);
+        console.error('Error in getPackageByIdController:', error.message);
         return res.status(500).json({
           status: 500,
+          ok: false,
           message: error.message || "Lỗi server khi lấy thông tin gói",
         });
       }
@@ -103,7 +111,7 @@ module.exports = {
     new Promise(async (resolve, reject) => {
       try {
         const { id: package_id } = req.params;
-        const { package_name, description, price, img_url, user_id, is_premium } = req.body; // Thêm is_premium
+        const { package_name, description, price, img_url, user_id, is_premium } = req.body;
 
         const result = await PackageService.updatePackageService({
           package_id,
@@ -117,13 +125,15 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
+          ok: result.ok,
           message: result.message,
           data: result.data,
         });
       } catch (error) {
-        console.error(error.message);
+        console.error('Error in updatePackageController:', error.message);
         return res.status(500).json({
           status: 500,
+          ok: false,
           message: error.message || "Lỗi server khi cập nhật gói",
         });
       }
@@ -142,13 +152,15 @@ module.exports = {
 
         return res.status(result.status).json({
           status: result.status,
+          ok: result.ok,
           message: result.message,
           data: result.data,
         });
       } catch (error) {
-        console.error(error.message);
+        console.error('Error in softDeletePackageController:', error.message);
         return res.status(500).json({
           status: 500,
+          ok: false,
           message: error.message || "Lỗi server khi xóa mềm gói",
         });
       }

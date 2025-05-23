@@ -47,7 +47,7 @@ module.exports = {
           description,
           price,
           img_url,
-          is_premium: is_premium || false, // Gán giá trị is_premium, mặc định là false nếu không truyền
+          is_premium: is_premium || false,
         });
 
         resolve({
@@ -61,7 +61,7 @@ module.exports = {
             img_url: newPackage.img_url,
             created_at: newPackage.created_at,
             is_delete: newPackage.is_delete,
-            is_premium: newPackage.is_premium, // Thêm is_premium vào response
+            is_premium: newPackage.is_premium,
           },
         });
       } catch (error) {
@@ -116,7 +116,7 @@ module.exports = {
                 price: packageData.price,
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
-                is_premium: packageData.is_premium, // Thêm is_premium vào response
+                is_premium: packageData.is_premium,
               },
             },
           });
@@ -136,7 +136,7 @@ module.exports = {
                 price: packageData.price,
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
-                is_premium: packageData.is_premium, // Thêm is_premium vào response
+                is_premium: packageData.is_premium,
               },
             },
           });
@@ -161,7 +161,7 @@ module.exports = {
                 price: packageData.price,
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
-                is_premium: packageData.is_premium, // Thêm is_premium vào response
+                is_premium: packageData.is_premium,
               },
             },
           });
@@ -185,7 +185,7 @@ module.exports = {
                 price: packageData.price,
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
-                is_premium: packageData.is_premium, // Thêm is_premium vào response
+                is_premium: packageData.is_premium,
               },
             },
           });
@@ -208,7 +208,7 @@ module.exports = {
   getAllPackagesService: ({ searchCondition, pageInfo }) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { keyword = '', is_delete = false } = searchCondition || {};
+        const { keyword = '', is_delete = false, is_premium } = searchCondition || {}; // Thêm is_premium vào searchCondition
         const { pageNum = 1, pageSize = 10 } = pageInfo || {};
 
         // Validate pageNum và pageSize
@@ -228,6 +228,15 @@ module.exports = {
           });
         }
 
+        // Kiểm tra giá trị is_premium
+        if (is_premium !== undefined && typeof is_premium !== 'boolean') {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "is_premium phải là giá trị boolean (true hoặc false)",
+          });
+        }
+
         // Tạo điều kiện tìm kiếm
         const searchQuery = {
           $and: [
@@ -240,6 +249,11 @@ module.exports = {
             { is_delete: is_delete },
           ],
         };
+
+        // Thêm điều kiện tìm kiếm theo is_premium nếu được cung cấp
+        if (is_premium !== undefined) {
+          searchQuery.$and.push({ is_premium });
+        }
 
         // Tính toán phân trang
         const skip = (pageNum - 1) * pageSize;
@@ -266,7 +280,7 @@ module.exports = {
           img_url: pkg.img_url,
           created_at: pkg.created_at,
           is_delete: pkg.is_delete,
-          is_premium: pkg.is_premium, // Thêm is_premium vào response
+          is_premium: pkg.is_premium,
         }));
 
         resolve({
@@ -322,7 +336,7 @@ module.exports = {
             img_url: packageData.img_url,
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
-            is_premium: packageData.is_premium, // Thêm is_premium vào response
+            is_premium: packageData.is_premium,
           },
         });
       } catch (error) {
@@ -406,7 +420,7 @@ module.exports = {
           packageData.price = price;
         }
         if (img_url !== undefined) packageData.img_url = img_url;
-        if (is_premium !== undefined) packageData.is_premium = is_premium; // Cập nhật is_premium nếu được truyền
+        if (is_premium !== undefined) packageData.is_premium = is_premium;
 
         await packageData.save();
 
@@ -421,7 +435,7 @@ module.exports = {
             img_url: packageData.img_url,
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
-            is_premium: packageData.is_premium, // Thêm is_premium vào response
+            is_premium: packageData.is_premium,
           },
         });
       } catch (error) {
@@ -493,7 +507,7 @@ module.exports = {
             img_url: packageData.img_url,
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
-            is_premium: packageData.is_premium, // Thêm is_premium vào response
+            is_premium: packageData.is_premium,
           },
         });
       } catch (error) {
