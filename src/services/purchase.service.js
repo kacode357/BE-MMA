@@ -48,7 +48,7 @@ module.exports = {
         const existingPurchase = await PurchaseModel.findOne({
           user_id,
           package_id,
-          status: { $in: ['pending', 'completed'] }, // Chỉ kiểm tra purchase ở trạng thái pending hoặc completed
+          status: { $in: ['pending', 'completed'] },
         })
           .populate('package_id', 'package_name')
           .populate('user_id', 'username')
@@ -74,7 +74,7 @@ module.exports = {
         const purchase = await PurchaseModel.create({
           user_id,
           package_id,
-          group_id: null, // Sẽ cập nhật sau khi tạo nhóm
+          group_id: null,
           status: "pending",
         });
 
@@ -99,23 +99,33 @@ module.exports = {
       }
     }),
 
-  searchPurchasesService: (searchCondition, pageInfo) =>
+  searchPurchasesService: (req, searchCondition = {}, pageInfo = {}) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { keyword, status } = searchCondition || {};
-        const { pageNum = 1, pageSize = 10 } = pageInfo || {};
+        // Gán giá trị mặc định cho searchCondition và pageInfo
+        const { keyword = '', status = '' } = searchCondition;
+        const { pageNum = 1, pageSize = 10 } = pageInfo;
 
-        // Validate required fields
-        if (!pageInfo || !searchCondition) {
+        // Kiểm tra role của người dùng từ req.user (được thêm bởi middleware auth)
+        const userRole = req.user.role;
+        console.log('User role in searchPurchasesService:', userRole); // Log role để kiểm tra
+
+        if (!['admin', 'user'].includes(userRole)) {
           return reject({
-            status: 400,
+            status: 403,
             ok: false,
-            message: "searchCondition và pageInfo là bắt buộc",
+            message: "Quyền không hợp lệ. Chỉ admin hoặc user mới được phép tìm kiếm.",
           });
         }
 
         // Xây dựng điều kiện tìm kiếm
         const query = {};
+
+        // Nếu là user, chỉ cho phép tìm kiếm purchase của chính họ
+        if (userRole === 'user') {
+          query.user_id = req.user._id;
+          console.log('User search - user_id:', req.user._id); // Log user_id để kiểm tra
+        }
 
         // Tìm kiếm theo keyword (tìm trong package_name thông qua populate)
         if (keyword) {
@@ -214,7 +224,7 @@ module.exports = {
         const existingPurchase = await PurchaseModel.findOne({
           user_id,
           package_id,
-          status: { $in: ['pending', 'completed'] }, // Chỉ kiểm tra purchase ở trạng thái pending hoặc completed
+          status: { $in: ['pending', 'completed'] },
         })
           .populate('package_id', 'package_name')
           .populate('user_id', 'username')

@@ -24,9 +24,9 @@ module.exports = {
   searchPurchasesController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { searchCondition, pageInfo } = req.body;
+        const { searchCondition = {}, pageInfo = {} } = req.body; // Gán giá trị mặc định nếu không truyền
 
-        const result = await PurchaseService.searchPurchasesService(searchCondition, pageInfo);
+        const result = await PurchaseService.searchPurchasesService(req, searchCondition, pageInfo);
 
         return res.status(result.status).json(result);
       } catch (error) {
