@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Tạo nhóm
 router.post("/groups", auth, GroupController.createGroupController);
-
+router.get("/groups/:id", auth, GroupController.getGroupByIdController);
 
 
 module.exports = router;

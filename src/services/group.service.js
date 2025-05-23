@@ -228,4 +228,63 @@ module.exports = {
         });
       }
     }),
+    getGroupByIdService: (groupId, user) =>
+  new Promise(async (resolve, reject) => {
+    try {
+      if (!groupId) {
+        return reject({
+          status: 400,
+          ok: false,
+          message: "group_id là bắt buộc",
+        });
+      }
+
+      const group = await GroupModel.findById(groupId)
+        .populate('owner_id', 'username')
+        .populate('package_id', 'package_name price is_premium')
+        .lean();
+
+      if (!group) {
+        return reject({
+          status: 404,
+          ok: false,
+          message: "Nhóm không tồn tại",
+        });
+      }
+
+      // Kiểm tra quyền truy cập
+      if (user.role !== 'admin' && group.owner_id._id.toString() !== user._id.toString()) {
+        return reject({
+          status: 403,
+          ok: false,
+          message: "Bạn không có quyền xem thông tin nhóm này",
+        });
+      }
+
+      const groupData = {
+        group_id: group._id,
+        group_name: group.group_name,
+        owner_id: group.owner_id._id,
+        owner_username: group.owner_id.username,
+        package_id: group.package_id._id,
+        package_name: group.package_id.package_name,
+        price: group.package_id.price,
+        is_premium: group.package_id.is_premium,
+        created_at: group.created_at,
+      };
+
+      resolve({
+        status: 200,
+        ok: true,
+        message: "Lấy thông tin nhóm thành công",
+        data: groupData,
+      });
+    } catch (error) {
+      reject({
+        status: 500,
+        ok: false,
+        message: "Lỗi khi lấy thông tin nhóm: " + error.message,
+      });
+    }
+  }),
 };

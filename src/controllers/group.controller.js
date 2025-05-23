@@ -1,4 +1,4 @@
-const { createGroupService, getAllGroupsService } = require("../services/group.service");
+const { createGroupService, getGroupByIdService } = require("../services/group.service");
 
 module.exports = {
   createGroupController: (req, res) =>
@@ -23,5 +23,18 @@ module.exports = {
       }
     }),
 
-  
+  getGroupByIdController: (req, res) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { id } = req.params;
+        const result = await getGroupByIdService(id, req.user);
+        return res.status(result.status).json(result);
+      } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({
+          ok: false,
+          message: error.message || "Lỗi server khi lấy thông tin nhóm",
+        });
+      }
+    }),
 };
