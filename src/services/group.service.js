@@ -159,19 +159,23 @@ module.exports = {
         const userRole = req.user.role;
         console.log('User role in getAllGroupsService:', userRole);
 
+        // Validate role
         if (!["admin", "user", "premium"].includes(userRole)) {
           return reject({
             status: 403,
             ok: false,
-            message: "Quyền không hợp lệ. Chỉ admin hoặc user mới được phép tìm kiếm.",
+            message: "Quyền không hợp lệ. Chỉ admin, user hoặc premium được phép tìm kiếm.",
           });
         }
 
         const query = {};
-        if (userRole === 'user') {
+
+        // Restrict non-admin users to their own groups
+        if (userRole === 'user' || userRole === 'premium') {
           query.owner_id = req.user._id;
         }
 
+        // Apply search filters
         if (keyword) {
           query.group_name = { $regex: keyword, $options: 'i' };
         }
