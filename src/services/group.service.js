@@ -39,8 +39,8 @@ module.exports = {
         }
 
         // Kiểm tra package tồn tại
-        const package = await PackageModel.findById(package_id);
-        if (!package) {
+        const packageData = await PackageModel.findById(package_id);
+        if (!packageData) {
           return reject({
             status: 404,
             ok: false,
@@ -49,7 +49,7 @@ module.exports = {
         }
 
         // Gói miễn phí: Cho phép tạo nhóm nếu user có role = premium
-        if (package.price === 0) {
+        if (packageData.price === 0) {
           if (user.role !== "premium") {
             return reject({
               status: 403,
@@ -146,6 +146,85 @@ module.exports = {
           status: 500,
           ok: false,
           message: "Lỗi khi tạo nhóm: " + error.message,
+        });
+      }
+    }),
+
+  getAllGroupsService: (req, searchCondition = {}, pageInfo = {}) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const { keyword = '', status = '' } = searchCondition; // Thêm status nếu cần
+        const { pageNum = 1, pageSize = 10 } = pageInfo;
+
+        const userRole = req.user.role;
+        console.log('User role in getAllGroupsService:', userRole);
+
+        if (!["admin", "user", "premium"].includes(userRole)) {
+          return reject({
+            status: 403,
+            ok: false,
+            message:
+              "Quyền không hợp lệ. Chỉ admin hoặc user mới được phép tìm kiếm.",
+          });
+        }
+
+        const query = {};
+        if (userRole === 'user') {
+          query.owner_id = req.user._id; // Chỉ lấy các nhóm của user hiện tại
+        }
+
+        // Tìm kiếm theo keyword (tên nhóm)
+        if (keyword) {
+          query.group_name = { $regex: keyword, $options: 'i' };
+        }
+
+        // Nếu có status, tìm kiếm theo status (nếu GroupModel có field status)
+        if (status) {
+          query.status = { $in: [status] };
+        }
+
+        const skip = (pageNum - 1) * pageSize;
+        const totalItems = await GroupModel.countDocuments(query);
+        const groups = await GroupModel.find(query)
+          .populate('owner_id', 'username')
+          .populate('package_id', 'package_name price is_premium')
+          .skip(skip)
+          .limit(pageSize)
+          .lean();
+
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const pageData = groups.map(group => ({
+          group_id: group._id,
+          group_name: group.group_name,
+          owner_id: group.owner_id._id,
+          owner_username: group.owner_id.username,
+          package_id: group.package_id._id,
+          package_name: group.package_id.package_name,
+          price: group.package_id.price,
+          is_premium: group.package_id.is_premium,
+          created_at: group.created_at,
+        }));
+
+        resolve({
+          status: 200,
+          ok: true,
+          message: "Tìm kiếm nhóm thành công",
+          data: {
+            pageData,
+            pageInfo: {
+              pageNum,
+              pageSize,
+              totalItems,
+              totalPages,
+            },
+          },
+        });
+      } catch (error) {
+        reject({
+          status: 500,
+          ok: false,
+          message: "Lỗi khi tìm kiếm nhóm: " + error.message,
         });
       }
     }),

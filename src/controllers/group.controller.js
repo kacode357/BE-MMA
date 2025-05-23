@@ -1,4 +1,4 @@
-const GroupService = require("../services/group.service");
+const { createGroupService, getAllGroupsService } = require("../services/group.service");
 
 module.exports = {
   createGroupController: (req, res) =>
@@ -6,7 +6,7 @@ module.exports = {
       try {
         const { group_name, owner_id, package_id, purchase_id } = req.body;
 
-        const result = await GroupService.createGroupService({
+        const result = await createGroupService({
           group_name,
           owner_id,
           package_id,
@@ -22,4 +22,6 @@ module.exports = {
         });
       }
     }),
+
+  
 };
