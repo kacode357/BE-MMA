@@ -61,6 +61,7 @@ module.exports = {
             created_at: purchase.purchase_date,
             package_name: package.package_name,
             user_id: purchase.user_id,
+            username: user.username, // Thêm username của người dùng
           },
         });
       } catch (error) {
