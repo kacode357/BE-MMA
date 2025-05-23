@@ -27,7 +27,7 @@ module.exports = {
           });
         }
 
-        // Check if package exists and is not free
+        // Check if package exists
         const packageData = await PackageModel.findById(package_id);
         if (!packageData) {
           return reject({
@@ -36,13 +36,15 @@ module.exports = {
             message: "Gói không tồn tại",
           });
         }
-        if (packageData.price === 0) {
-          return reject({
-            status: 400,
-            ok: false,
-            message: "Gói miễn phí không cần mua",
-          });
-        }
+
+        // Bỏ kiểm tra gói miễn phí không cần mua
+        // if (packageData.price === 0) {
+        //   return reject({
+        //     status: 400,
+        //     ok: false,
+        //     message: "Gói miễn phí không cần mua",
+        //   });
+        // }
 
         // Check for existing purchase
         const existingPurchase = await PurchaseModel.findOne({
@@ -111,7 +113,13 @@ module.exports = {
         const userRole = req.user.role;
         console.log('User role in searchPurchasesService:', userRole);
 
-       
+        // if (!['admin', 'user'].includes(userRole)) {
+        //   return reject({
+        //     status: 403,
+        //     ok: false,
+        //     message: "Quyền không hợp lệ. Chỉ admin hoặc user mới được phép tìm kiếm.",
+        //   });
+        // }
 
         // Kiểm tra giá trị is_premium
         if (is_premium !== undefined && typeof is_premium !== 'boolean') {
@@ -169,7 +177,7 @@ module.exports = {
         const skip = (pageNum - 1) * pageSize;
         const totalItems = await PurchaseModel.countDocuments(query);
         const purchases = await PurchaseModel.find(query)
-          .populate('package_id', 'package_name price is_premium') // Thêm is_premium vào populate
+          .populate('package_id', 'package_name price is_premium')
           .populate('user_id', 'username')
           .skip(skip)
           .limit(pageSize)
@@ -187,7 +195,7 @@ module.exports = {
           group_id: purchase.group_id,
           status: purchase.status,
           purchase_date: purchase.purchase_date,
-          is_premium: purchase.package_id.is_premium, // Thêm is_premium vào response
+          is_premium: purchase.package_id.is_premium,
         }));
 
         resolve({
