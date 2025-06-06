@@ -12,7 +12,7 @@ const packageSchema = new mongoose.Schema({
 },
   supported_features: { 
     type: [String], 
-    enum: ["text", "image", "image_to_image", "remove_background"], // Allowed features
+    enum: ["text", "image", "image_to_image", "remove_background"], // Allowed featur
     default: ["text"] // Default to text if not specified
   },
   created_at: { type: Date, default: Date.now },
