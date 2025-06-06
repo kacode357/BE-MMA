@@ -97,9 +97,7 @@ module.exports = {
           user_id,
         });
 
-        // Cập nhật role = premium cho thành viên
-        user.role = "premium";
-        await user.save();
+        // Không cập nhật role, giữ nguyên role hiện tại của user
 
         resolve({
           status: 201,
