@@ -18,6 +18,7 @@ module.exports = {
         }
 
         const user = await UserModel.findById(user_id);
+        console.log("User:", user);
         if (!user || user.role !== "admin") {
           return reject({
             status: 403,
