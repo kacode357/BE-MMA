@@ -23,19 +23,19 @@ const ChatHistorySchema = new mongoose.Schema({
   },
   message_type: {
     type: String,
-    enum: ["text", "image", "file", "audio","image_to_image"],
+    enum: ["text", "image", "file", "audio", "image_to_image", "remove_background"],
     default: "text",
   },
   ai_source: {
     type: String,
-    enum: ["gemini", "thehive", null],
+    enum: ["gemini", "thehive", "clipdrop", null],
     default: null,
   },
   prompt: {
     type: String,
     required: true,
   },
-  input_image: { type: String }, 
+  input_image: { type: String },
   response: {
     type: String,
   },

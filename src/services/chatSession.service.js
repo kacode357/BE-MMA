@@ -1,5 +1,6 @@
 const axios = require("axios");
-const { GoogleGenAI, Modality } = require("@google/genai"); // Add Modality import
+const FormData = require("form-data");
+const { GoogleGenAI, Modality } = require("@google/genai");
 const ChatSessionModel = require("../models/chatSession.model");
 const ChatHistoryModel = require("../models/chatHistory.model");
 const UserModel = require("../models/user.model");
@@ -87,18 +88,18 @@ class ChatSessionService {
     try {
       this.logger.info('Sending message', { session_id, user_id, message_type, ai_source });
 
-      if (!session_id || !user_id || !prompt || !message_type) {
-        throw new Error("session_id, user_id, prompt và message_type là bắt buộc");
+      if (!session_id || !user_id || !message_type) {
+        throw new Error("session_id, user_id và message_type là bắt buộc");
       }
 
-      const validMessageTypes = ['text', 'image', 'image_to_image'];
+      const validMessageTypes = ['text', 'image', 'image_to_image', 'remove_background'];
       if (!validMessageTypes.includes(message_type)) {
-        throw new Error("message_type phải là 'text', 'image' hoặc 'image_to_image'");
+        throw new Error("message_type phải là 'text', 'image', 'image_to_image' hoặc 'remove_background'");
       }
 
-      const validAiSources = ['gemini', 'thehive'];
-      if ((message_type === 'image' || message_type === 'image_to_image') && !validAiSources.includes(ai_source)) {
-        throw new Error("ai_source phải là 'gemini' hoặc 'thehive' khi message_type là 'image' hoặc 'image_to_image'");
+      const validAiSources = ['gemini', 'thehive', 'clipdrop'];
+      if ((message_type === 'image' || message_type === 'image_to_image' || message_type === 'remove_background') && !validAiSources.includes(ai_source)) {
+        throw new Error("ai_source phải là 'gemini', 'thehive' hoặc 'clipdrop' khi message_type là 'image', 'image_to_image' hoặc 'remove_background'");
       }
 
       const chatSession = await ChatSessionModel.findById(session_id);
@@ -293,13 +294,11 @@ class ChatSessionService {
           throw new Error("input_image phải có mimeType là 'image/jpeg' hoặc 'image/png'");
         }
 
-        // Validate base64 data
         if (!isBase64(data, { mimeRequired: false })) {
           this.logger.error('Invalid base64 data', { dataLength: data.length });
           throw new Error("input_image.data không phải là chuỗi base64 hợp lệ");
         }
 
-        // Verify base64 can be decoded
         try {
           const buffer = Buffer.from(data, 'base64');
           if (buffer.length === 0) {
@@ -311,7 +310,6 @@ class ChatSessionService {
           throw new Error("Không thể giải mã chuỗi base64: " + decodeError.message);
         }
 
-        // Prepare request config based on provided script
         const requestConfig = {
           model: "gemini-2.0-flash-preview-image-generation",
           contents: [
@@ -342,7 +340,7 @@ class ChatSessionService {
                   {
                     inlineData: {
                       mimeType: mimeType,
-                      data: data.substring(0, 50) + '...' // Log first 50 chars
+                      data: data.substring(0, 50) + '...'
                     },
                   },
                 ],
@@ -359,7 +357,6 @@ class ChatSessionService {
             throw new Error('Phản hồi từ Gemini Image-to-Image API không đúng định dạng: thiếu candidates hoặc parts');
           }
 
-          // Process response parts as in the provided script
           const imageDataArray = [];
           const textDataArray = [];
 
@@ -404,6 +401,99 @@ class ChatSessionService {
           let errorMessage = `Lỗi khi gọi Gemini Image-to-Image API: ${apiError.message}`;
           if (apiError.response && apiError.response.status === 400) {
             errorMessage = `Dữ liệu không hợp lệ: ${apiError.response.data.error.message || apiError.message}`;
+          }
+          throw new Error(errorMessage);
+        }
+      } else if (message_type === 'remove_background') {
+        if (ai_source !== 'clipdrop') {
+          throw new Error("remove_background chỉ hỗ trợ ai_source là 'clipdrop'");
+        }
+
+        if (!input_image) {
+          throw new Error("input_image là bắt buộc cho message_type 'remove_background'");
+        }
+
+        const { mimeType, data } = input_image;
+        if (!mimeType || !data) {
+          throw new Error("input_image phải chứa mimeType và data");
+        }
+
+        const validMimeTypes = ['image/jpeg', 'image/png'];
+        if (!validMimeTypes.includes(mimeType)) {
+          throw new Error("input_image phải có mimeType là 'image/jpeg' hoặc 'image/png'");
+        }
+
+        if (!isBase64(data, { mimeRequired: false })) {
+          this.logger.error('Invalid base64 data', { dataLength: data.length });
+          throw new Error("input_image.data không phải là chuỗi base64 hợp lệ");
+        }
+
+        let buffer;
+        try {
+          buffer = Buffer.from(data, 'base64');
+          if (buffer.length === 0) {
+            throw new Error("Dữ liệu base64 rỗng sau khi giải mã");
+          }
+          this.logger.info('Base64 data validated', { bufferLength: buffer.length });
+        } catch (decodeError) {
+          this.logger.error('Base64 decode error', { error: decodeError.message });
+          throw new Error("Không thể giải mã chuỗi base64: " + decodeError.message);
+        }
+
+        const form = new FormData();
+        form.append('image_file', buffer, {
+          filename: `image.${mimeType === 'image/jpeg' ? 'jpg' : 'png'}`,
+          contentType: mimeType,
+        });
+
+        this.logger.info('Sending background removal request to Clipdrop', { mimeType });
+
+        try {
+          const response = await axios.post(
+            'https://clipdrop-api.co/remove-background/v1',
+            form,
+            {
+              headers: {
+                'x-api-key': process.env.CLIPDROP_API_KEY,
+                ...form.getHeaders(),
+              },
+              responseType: 'arraybuffer',
+            }
+          );
+
+          this.logger.info('Clipdrop background removal response', { contentLength: response.data.length });
+
+          const outputImage = {
+            mimeType: 'image/png',
+            data: Buffer.from(response.data).toString('base64'),
+          };
+
+          responseData = JSON.stringify({
+            images: [outputImage],
+            text: prompt || 'Background removed',
+          });
+
+          chatHistory = await ChatHistoryModel.create({
+            session_id,
+            user_id,
+            package_id: chatSession.package_id,
+            group_id: chatSession.group_id,
+            message_type: 'remove_background',
+            ai_source: 'clipdrop',
+            prompt: prompt || 'Remove background',
+            input_image: JSON.stringify({ mimeType, data }),
+            response: responseData,
+            created_at: new Date(),
+          });
+        } catch (apiError) {
+          this.logger.error('Clipdrop API Error', {
+            error: apiError.message,
+            response: apiError.response ? Buffer.from(apiError.response.data).toString() : null,
+            stack: apiError.stack,
+          });
+          let errorMessage = `Lỗi khi gọi Clipdrop API: ${apiError.message}`;
+          if (apiError.response && apiError.response.status === 400) {
+            errorMessage = `Dữ liệu không hợp lệ: ${apiError.response.data.message || apiError.message}`;
           }
           throw new Error(errorMessage);
         }

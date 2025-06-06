@@ -5,15 +5,14 @@ const packageSchema = new mongoose.Schema({
   description: { type: String, trim: true },
   price: { type: Number, required: true, min: 0 },
   img_url: { type: String, trim: true, required: false },
-  ai_model: { 
-    type: String, 
-    trim: true, 
-    enum: ["gemini", "thehive", "none"], // Allowed AI models
-    default: "none" // Default for packages not tied to a specific model
-  },
+ ai_model: {
+  type: String,
+  enum: ["gemini", "thehive", "none", "clipdrop"],
+  default: "none",
+},
   supported_features: { 
     type: [String], 
-    enum: ["text", "image", "image_to_image"], // Allowed features
+    enum: ["text", "image", "image_to_image", "remove_background"], // Allowed features
     default: ["text"] // Default to text if not specified
   },
   created_at: { type: Date, default: Date.now },

@@ -43,7 +43,7 @@ module.exports = {
         }
 
         // Validate ai_model if provided
-        if (ai_model && !["gemini", "thehive", "none"].includes(ai_model)) {
+        if (ai_model && !["gemini", "thehive", "none", "clipdrop"].includes(ai_model)) {
           return reject({
             status: 400,
             ok: false,
@@ -60,7 +60,7 @@ module.exports = {
               message: "supported_features phải là mảng không rỗng",
             });
           }
-          const validFeatures = ["text", "image", "image_to_image"];
+          const validFeatures = ["text", "image", "image_to_image", "remove_background"];
           if (!supported_features.every(feature => validFeatures.includes(feature))) {
             return reject({
               status: 400,
@@ -301,7 +301,7 @@ module.exports = {
         }
 
         // Validate ai_model
-        if (ai_model && !["gemini", "thehive", "none"].includes(ai_model)) {
+        if (ai_model && !["gemini", "thehive", "none", "clipdrop"].includes(ai_model)) {
           return reject({
             status: 400,
             ok: false,
@@ -318,7 +318,7 @@ module.exports = {
               message: "supported_features phải là mảng không rỗng",
             });
           }
-          const validFeatures = ["text", "image", "image_to_image"];
+          const validFeatures = ["text", "image", "image_to_image", "remove_background"];
           if (!supported_features.every(feature => validFeatures.includes(feature))) {
             return reject({
               status: 400,
@@ -532,7 +532,7 @@ module.exports = {
 
         // Validate and update ai_model
         if (ai_model !== undefined) {
-          if (!["gemini", "thehive", "none"].includes(ai_model)) {
+          if (!["gemini", "thehive", "none", "clipdrop"].includes(ai_model)) {
             return reject({
               status: 400,
               ok: false,
@@ -551,7 +551,7 @@ module.exports = {
               message: "supported_features phải là mảng không rỗng",
             });
           }
-          const validFeatures = ["text", "image", "image_to_image"];
+          const validFeatures = ["text", "image", "image_to_image", "remove_background"];
           if (!supported_features.every(feature => validFeatures.includes(feature))) {
             return reject({
               status: 400,
