@@ -7,7 +7,7 @@ module.exports = {
   createPackageService: (packageData) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { package_name, description, price, img_url, user_id, is_premium } = packageData;
+        const { package_name, description, price, img_url, user_id, is_premium, ai_model, supported_features } = packageData;
 
         if (!user_id) {
           return reject({
@@ -18,7 +18,6 @@ module.exports = {
         }
 
         const user = await UserModel.findById(user_id);
-        console.log("User:", user);
         if (!user || user.role !== "admin") {
           return reject({
             status: 403,
@@ -43,16 +42,47 @@ module.exports = {
           });
         }
 
+        // Validate ai_model if provided
+        if (ai_model && !["gemini", "thehive", "none"].includes(ai_model)) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "ai_model phải là 'gemini', 'thehive', hoặc 'none'",
+          });
+        }
+
+        // Validate supported_features if provided
+        if (supported_features) {
+          if (!Array.isArray(supported_features) || supported_features.length === 0) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "supported_features phải là mảng không rỗng",
+            });
+          }
+          const validFeatures = ["text", "image", "image_to_image"];
+          if (!supported_features.every(feature => validFeatures.includes(feature))) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "supported_features phải chứa các giá trị: 'text', 'image', hoặc 'image_to_image'",
+            });
+          }
+        }
+
         const newPackage = await PackageModel.create({
           package_name,
           description,
           price,
           img_url,
           is_premium: is_premium || false,
+          ai_model: ai_model || "none",
+          supported_features: supported_features || ["text"],
         });
 
         resolve({
           status: 201,
+          ok: true,
           message: "Tạo gói thành công",
           data: {
             package_id: newPackage._id,
@@ -63,6 +93,8 @@ module.exports = {
             created_at: newPackage.created_at,
             is_delete: newPackage.is_delete,
             is_premium: newPackage.is_premium,
+            ai_model: newPackage.ai_model,
+            supported_features: newPackage.supported_features,
           },
         });
       } catch (error) {
@@ -74,7 +106,7 @@ module.exports = {
       }
     }),
 
-  checkPackageAccessService: ({ user_id, package_id }) =>
+  checkPackageAccessService: ({ user_id, package_id, requested_feature }) =>
     new Promise(async (resolve, reject) => {
       try {
         if (!user_id || !package_id) {
@@ -103,10 +135,29 @@ module.exports = {
           });
         }
 
+        // Check if requested_feature is supported
+        if (requested_feature && !packageData.supported_features.includes(requested_feature)) {
+          return reject({
+            status: 403,
+            ok: false,
+            message: `Gói này không hỗ trợ tính năng '${requested_feature}'`,
+          });
+        }
+
+        // Check if ai_model matches requested feature's requirements
+        if (requested_feature === "image_to_image" && packageData.ai_model !== "gemini") {
+          return reject({
+            status: 403,
+            ok: false,
+            message: "Tính năng image_to_image chỉ hỗ trợ với ai_model là 'gemini'",
+          });
+        }
+
         // User có role = premium: Truy cập tất cả gói AI
         if (user.role === "premium") {
           return resolve({
             status: 200,
+            ok: true,
             message: "Có quyền sử dụng gói với role Premium",
             data: {
               has_access: true,
@@ -118,6 +169,8 @@ module.exports = {
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
                 is_premium: packageData.is_premium,
+                ai_model: packageData.ai_model,
+                supported_features: packageData.supported_features,
               },
             },
           });
@@ -127,6 +180,7 @@ module.exports = {
         if (packageData.price === 0) {
           return resolve({
             status: 200,
+            ok: true,
             message: "Có quyền sử dụng gói miễn phí",
             data: {
               has_access: true,
@@ -138,6 +192,8 @@ module.exports = {
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
                 is_premium: packageData.is_premium,
+                ai_model: packageData.ai_model,
+                supported_features: packageData.supported_features,
               },
             },
           });
@@ -152,6 +208,7 @@ module.exports = {
         if (purchase) {
           return resolve({
             status: 200,
+            ok: true,
             message: "Có quyền sử dụng gói đã mua",
             data: {
               has_access: true,
@@ -163,6 +220,8 @@ module.exports = {
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
                 is_premium: packageData.is_premium,
+                ai_model: packageData.ai_model,
+                supported_features: packageData.supported_features,
               },
             },
           });
@@ -176,6 +235,7 @@ module.exports = {
         if (groupMember) {
           return resolve({
             status: 200,
+            ok: true,
             message: "Có quyền sử dụng gói qua nhóm",
             data: {
               has_access: true,
@@ -187,6 +247,8 @@ module.exports = {
                 img_url: packageData.img_url,
                 created_at: packageData.created_at,
                 is_premium: packageData.is_premium,
+                ai_model: packageData.ai_model,
+                supported_features: packageData.supported_features,
               },
             },
           });
@@ -209,7 +271,7 @@ module.exports = {
   getAllPackagesService: ({ searchCondition, pageInfo }) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { keyword = '', is_delete = false, is_premium } = searchCondition || {}; // Thêm is_premium vào searchCondition
+        const { keyword = '', is_delete = false, is_premium, ai_model, supported_features } = searchCondition || {};
         const { pageNum = 1, pageSize = 10 } = pageInfo || {};
 
         // Validate pageNum và pageSize
@@ -229,13 +291,41 @@ module.exports = {
           });
         }
 
-        // Kiểm tra giá trị is_premium
+        // Validate is_premium
         if (is_premium !== undefined && typeof is_premium !== 'boolean') {
           return reject({
             status: 400,
             ok: false,
-            message: "is_premium phải là giá trị boolean (true hoặc false)",
+            message: "is_premium phải là giá trị boolean",
           });
+        }
+
+        // Validate ai_model
+        if (ai_model && !["gemini", "thehive", "none"].includes(ai_model)) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "ai_model phải là 'gemini', 'thehive', hoặc 'none'",
+          });
+        }
+
+        // Validate supported_features
+        if (supported_features) {
+          if (!Array.isArray(supported_features) || supported_features.length === 0) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "supported_features phải là mảng không rỗng",
+            });
+          }
+          const validFeatures = ["text", "image", "image_to_image"];
+          if (!supported_features.every(feature => validFeatures.includes(feature))) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "supported_features phải chứa các giá trị: 'text', 'image', hoặc 'image_to_image'",
+            });
+          }
         }
 
         // Tạo điều kiện tìm kiếm
@@ -251,9 +341,16 @@ module.exports = {
           ],
         };
 
-        // Thêm điều kiện tìm kiếm theo is_premium nếu được cung cấp
         if (is_premium !== undefined) {
           searchQuery.$and.push({ is_premium });
+        }
+
+        if (ai_model) {
+          searchQuery.$and.push({ ai_model });
+        }
+
+        if (supported_features) {
+          searchQuery.$and.push({ supported_features: { $all: supported_features } });
         }
 
         // Tính toán phân trang
@@ -282,10 +379,13 @@ module.exports = {
           created_at: pkg.created_at,
           is_delete: pkg.is_delete,
           is_premium: pkg.is_premium,
+          ai_model: pkg.ai_model,
+          supported_features: pkg.supported_features,
         }));
 
         resolve({
           status: 200,
+          ok: true,
           message: "Lấy danh sách gói thành công",
           data: {
             pageData: packageList,
@@ -328,6 +428,7 @@ module.exports = {
 
         resolve({
           status: 200,
+          ok: true,
           message: "Lấy thông tin gói thành công",
           data: {
             package_id: packageData._id,
@@ -338,6 +439,8 @@ module.exports = {
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
             is_premium: packageData.is_premium,
+            ai_model: packageData.ai_model,
+            supported_features: packageData.supported_features,
           },
         });
       } catch (error) {
@@ -349,7 +452,7 @@ module.exports = {
       }
     }),
 
-  updatePackageService: ({ package_id, package_name, description, price, img_url, user_id, is_premium }) =>
+  updatePackageService: ({ package_id, package_name, description, price, img_url, user_id, is_premium, ai_model, supported_features }) =>
     new Promise(async (resolve, reject) => {
       try {
         if (!package_id) {
@@ -385,6 +488,15 @@ module.exports = {
             message: "Gói không tồn tại",
           });
         }
+
+        if (packageData.is_delete) {
+          return reject({
+            status: 400,
+            ok: false,
+            message: "Gói đã bị xóa, không thể cập nhật",
+          });
+        }
+
         if (package_name) {
           const existingPackage = await PackageModel.findOne({
             package_name,
@@ -398,18 +510,11 @@ module.exports = {
               message: "Tên gói đã tồn tại",
             });
           }
-        }
-        if (packageData.is_delete) {
-          return reject({
-            status: 400,
-            ok: false,
-            message: "Gói đã bị xóa, không thể cập nhật",
-          });
+          packageData.package_name = package_name;
         }
 
-        // Cập nhật các trường nếu được cung cấp
-        if (package_name) packageData.package_name = package_name;
         if (description !== undefined) packageData.description = description;
+
         if (price !== undefined) {
           if (price < 0) {
             return reject({
@@ -420,13 +525,48 @@ module.exports = {
           }
           packageData.price = price;
         }
+
         if (img_url !== undefined) packageData.img_url = img_url;
+
         if (is_premium !== undefined) packageData.is_premium = is_premium;
+
+        // Validate and update ai_model
+        if (ai_model !== undefined) {
+          if (!["gemini", "thehive", "none"].includes(ai_model)) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "ai_model phải là 'gemini', 'thehive', hoặc 'none'",
+            });
+          }
+          packageData.ai_model = ai_model;
+        }
+
+        // Validate and update supported_features
+        if (supported_features !== undefined) {
+          if (!Array.isArray(supported_features) || supported_features.length === 0) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "supported_features phải là mảng không rỗng",
+            });
+          }
+          const validFeatures = ["text", "image", "image_to_image"];
+          if (!supported_features.every(feature => validFeatures.includes(feature))) {
+            return reject({
+              status: 400,
+              ok: false,
+              message: "supported_features phải chứa các giá trị: 'text', 'image', hoặc 'image_to_image'",
+            });
+          }
+          packageData.supported_features = supported_features;
+        }
 
         await packageData.save();
 
         resolve({
           status: 200,
+          ok: true,
           message: "Cập nhật gói thành công",
           data: {
             package_id: packageData._id,
@@ -437,6 +577,8 @@ module.exports = {
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
             is_premium: packageData.is_premium,
+            ai_model: packageData.ai_model,
+            supported_features: packageData.supported_features,
           },
         });
       } catch (error) {
@@ -493,12 +635,12 @@ module.exports = {
           });
         }
 
-        // Cập nhật is_delete thành true
         packageData.is_delete = true;
         await packageData.save();
 
         resolve({
           status: 200,
+          ok: true,
           message: "Xóa gói thành công",
           data: {
             package_id: packageData._id,
@@ -509,6 +651,8 @@ module.exports = {
             created_at: packageData.created_at,
             is_delete: packageData.is_delete,
             is_premium: packageData.is_premium,
+            ai_model: packageData.ai_model,
+            supported_features: packageData.supported_features,
           },
         });
       } catch (error) {

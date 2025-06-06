@@ -4,7 +4,7 @@ module.exports = {
   createPackageController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { package_name, description, price, img_url, user_id, is_premium } = req.body;
+        const { package_name, description, price, img_url, user_id, is_premium, ai_model, supported_features } = req.body;
 
         const result = await PackageService.createPackageService({
           package_name,
@@ -13,11 +13,13 @@ module.exports = {
           img_url,
           user_id,
           is_premium,
+          ai_model,
+          supported_features,
         });
 
         return res.status(result.status).json({
           status: result.status,
-          ok: result.ok, // Thêm trường ok vào response
+          ok: result.ok,
           message: result.message,
           data: result.data,
         });
@@ -34,12 +36,13 @@ module.exports = {
   checkPackageAccessController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { user_id } = req.body;
+        const { user_id, requested_feature } = req.body;
         const { id: package_id } = req.params;
 
         const result = await PackageService.checkPackageAccessService({
           user_id,
           package_id,
+          requested_feature,
         });
 
         return res.status(result.status).json({
@@ -61,7 +64,7 @@ module.exports = {
   getAllPackagesController: (req, res) =>
     new Promise(async (resolve, reject) => {
       try {
-        const { searchCondition = {}, pageInfo = {} } = req.body; // Gán giá trị mặc định nếu không truyền
+        const { searchCondition = {}, pageInfo = {} } = req.body;
 
         const result = await PackageService.getAllPackagesService({
           searchCondition,
@@ -111,7 +114,7 @@ module.exports = {
     new Promise(async (resolve, reject) => {
       try {
         const { id: package_id } = req.params;
-        const { package_name, description, price, img_url, user_id, is_premium } = req.body;
+        const { package_name, description, price, img_url, user_id, is_premium, ai_model, supported_features } = req.body;
 
         const result = await PackageService.updatePackageService({
           package_id,
@@ -121,6 +124,8 @@ module.exports = {
           img_url,
           user_id,
           is_premium,
+          ai_model,
+          supported_features,
         });
 
         return res.status(result.status).json({
